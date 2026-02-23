@@ -4,11 +4,11 @@
 
 **Goal:** Sync two personal iCloud calendars to a Google work calendar as "Busy" blocks, running every 15 minutes on macOS.
 
-**Architecture:** A single Python package (`cal_sync/`) with modules for config, iCloud fetching, Google Calendar pushing, state tracking, and diff logic. A CLI entry point handles auth and sync. Scheduled via macOS launchd.
+**Architecture:** A single Python package (`calsync/`) with modules for config, iCloud fetching, Google Calendar pushing, state tracking, and diff logic. A CLI entry point handles auth and sync. Scheduled via macOS launchd.
 
 **Tech Stack:** Python 3.11+, caldav, google-api-python-client, google-auth-oauthlib, pyyaml, pytest
 
-**Design doc:** `docs/plans/2026-02-23-ical-to-gcal-sync-design.md`
+**Design doc:** `docs/plans/2026-02-23-ical-to-gcalsync-design.md`
 
 ---
 
@@ -16,7 +16,7 @@
 
 **Files:**
 - Create: `pyproject.toml`
-- Create: `cal_sync/__init__.py`
+- Create: `calsync/__init__.py`
 - Create: `tests/__init__.py`
 - Create: `tests/conftest.py`
 - Create: `config.yaml.example`
@@ -26,7 +26,7 @@
 
 ```toml
 [project]
-name = "cal-sync"
+name = "calsync"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
@@ -40,13 +40,13 @@ dependencies = [
 dev = ["pytest>=8.0", "pytest-mock>=3.12"]
 
 [project.scripts]
-cal-sync = "cal_sync.cli:main"
+calsync = "calsync.cli:main"
 ```
 
 **Step 2: Create directory structure and empty inits**
 
 ```python
-# cal_sync/__init__.py
+# calsync/__init__.py
 # (empty)
 ```
 
@@ -100,7 +100,7 @@ Expected: clean install, no errors
 **Step 6: Commit**
 
 ```bash
-git add pyproject.toml cal_sync/__init__.py tests/__init__.py tests/conftest.py config.yaml.example .gitignore
+git add pyproject.toml calsync/__init__.py tests/__init__.py tests/conftest.py config.yaml.example .gitignore
 git commit -m "feat: project scaffolding with dependencies"
 ```
 
@@ -109,7 +109,7 @@ git commit -m "feat: project scaffolding with dependencies"
 ### Task 2: Config Loading
 
 **Files:**
-- Create: `cal_sync/config.py`
+- Create: `calsync/config.py`
 - Create: `tests/test_config.py`
 
 **Step 1: Write the failing test**
@@ -117,7 +117,7 @@ git commit -m "feat: project scaffolding with dependencies"
 ```python
 # tests/test_config.py
 from pathlib import Path
-from cal_sync.config import load_config
+from calsync.config import load_config
 
 
 def test_load_config(tmp_path):
@@ -177,7 +177,7 @@ Expected: FAIL — `ModuleNotFoundError` or `ImportError`
 **Step 3: Write minimal implementation**
 
 ```python
-# cal_sync/config.py
+# calsync/config.py
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -222,7 +222,7 @@ Expected: 3 passed
 **Step 5: Commit**
 
 ```bash
-git add cal_sync/config.py tests/test_config.py
+git add calsync/config.py tests/test_config.py
 git commit -m "feat: config loading from YAML"
 ```
 
@@ -231,7 +231,7 @@ git commit -m "feat: config loading from YAML"
 ### Task 3: State Management
 
 **Files:**
-- Create: `cal_sync/state.py`
+- Create: `calsync/state.py`
 - Create: `tests/test_state.py`
 
 **Step 1: Write the failing tests**
@@ -239,7 +239,7 @@ git commit -m "feat: config loading from YAML"
 ```python
 # tests/test_state.py
 import json
-from cal_sync.state import SyncState
+from calsync.state import SyncState
 
 
 def test_load_empty(tmp_path):
@@ -289,7 +289,7 @@ Expected: FAIL — `ImportError`
 **Step 3: Write minimal implementation**
 
 ```python
-# cal_sync/state.py
+# calsync/state.py
 import json
 from pathlib import Path
 
@@ -327,7 +327,7 @@ Expected: 4 passed
 **Step 5: Commit**
 
 ```bash
-git add cal_sync/state.py tests/test_state.py
+git add calsync/state.py tests/test_state.py
 git commit -m "feat: state management with JSON persistence"
 ```
 
@@ -336,14 +336,14 @@ git commit -m "feat: state management with JSON persistence"
 ### Task 4: Diff Logic
 
 **Files:**
-- Create: `cal_sync/diff.py`
+- Create: `calsync/diff.py`
 - Create: `tests/test_diff.py`
 
 **Step 1: Write the failing tests**
 
 ```python
 # tests/test_diff.py
-from cal_sync.diff import Event, compute_diff
+from calsync.diff import Event, compute_diff
 
 
 def test_new_event_creates():
@@ -418,7 +418,7 @@ Expected: FAIL — `ImportError`
 **Step 3: Write minimal implementation**
 
 ```python
-# cal_sync/diff.py
+# calsync/diff.py
 from dataclasses import dataclass
 
 
@@ -464,7 +464,7 @@ Expected: 5 passed
 **Step 5: Commit**
 
 ```bash
-git add cal_sync/diff.py tests/test_diff.py
+git add calsync/diff.py tests/test_diff.py
 git commit -m "feat: diff logic for create/update/delete"
 ```
 
@@ -473,7 +473,7 @@ git commit -m "feat: diff logic for create/update/delete"
 ### Task 5: iCloud CalDAV Client
 
 **Files:**
-- Create: `cal_sync/icloud.py`
+- Create: `calsync/icloud.py`
 - Create: `tests/test_icloud.py`
 
 **Step 1: Write the failing tests**
@@ -484,8 +484,8 @@ These tests mock the `caldav` library since we can't hit iCloud in tests.
 # tests/test_icloud.py
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timezone
-from cal_sync.icloud import fetch_icloud_events
-from cal_sync.diff import Event
+from calsync.icloud import fetch_icloud_events
+from calsync.diff import Event
 
 
 def _make_mock_vevent(uid, dtstart, dtend, status="CONFIRMED"):
@@ -518,7 +518,7 @@ def _make_mock_caldav_event(uid, dtstart, dtend, status="CONFIRMED"):
     return event
 
 
-@patch("cal_sync.icloud.caldav.DAVClient")
+@patch("calsync.icloud.caldav.DAVClient")
 def test_fetch_events_basic(mock_client_class):
     mock_client = MagicMock()
     mock_client_class.return_value = mock_client
@@ -544,7 +544,7 @@ def test_fetch_events_basic(mock_client_class):
     assert events[0].all_day is False
 
 
-@patch("cal_sync.icloud.caldav.DAVClient")
+@patch("calsync.icloud.caldav.DAVClient")
 def test_fetch_skips_cancelled(mock_client_class):
     mock_client = MagicMock()
     mock_client_class.return_value = mock_client
@@ -576,13 +576,13 @@ Expected: FAIL — `ImportError`
 **Step 3: Write minimal implementation**
 
 ```python
-# cal_sync/icloud.py
+# calsync/icloud.py
 import logging
 from datetime import date, datetime, timedelta, timezone
 
 import caldav
 
-from cal_sync.diff import Event
+from calsync.diff import Event
 
 logger = logging.getLogger(__name__)
 
@@ -661,7 +661,7 @@ Expected: 2 passed
 **Step 5: Commit**
 
 ```bash
-git add cal_sync/icloud.py tests/test_icloud.py
+git add calsync/icloud.py tests/test_icloud.py
 git commit -m "feat: iCloud CalDAV event fetching"
 ```
 
@@ -670,7 +670,7 @@ git commit -m "feat: iCloud CalDAV event fetching"
 ### Task 6: Google Calendar Client
 
 **Files:**
-- Create: `cal_sync/google_cal.py`
+- Create: `calsync/google_cal.py`
 - Create: `tests/test_google_cal.py`
 
 **Step 1: Write the failing tests**
@@ -679,8 +679,8 @@ git commit -m "feat: iCloud CalDAV event fetching"
 # tests/test_google_cal.py
 from unittest.mock import MagicMock, patch
 from pathlib import Path
-from cal_sync.google_cal import GoogleCalClient
-from cal_sync.diff import Event
+from calsync.google_cal import GoogleCalClient
+from calsync.diff import Event
 
 
 def _mock_service():
@@ -748,7 +748,7 @@ Expected: FAIL — `ImportError`
 **Step 3: Write minimal implementation**
 
 ```python
-# cal_sync/google_cal.py
+# calsync/google_cal.py
 import logging
 from pathlib import Path
 
@@ -757,7 +757,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
-from cal_sync.diff import Event
+from calsync.diff import Event
 
 logger = logging.getLogger(__name__)
 
@@ -837,7 +837,7 @@ Expected: 4 passed
 **Step 5: Commit**
 
 ```bash
-git add cal_sync/google_cal.py tests/test_google_cal.py
+git add calsync/google_cal.py tests/test_google_cal.py
 git commit -m "feat: Google Calendar client for busy blocks"
 ```
 
@@ -846,7 +846,7 @@ git commit -m "feat: Google Calendar client for busy blocks"
 ### Task 7: Sync Orchestration
 
 **Files:**
-- Create: `cal_sync/sync.py`
+- Create: `calsync/sync.py`
 - Create: `tests/test_sync.py`
 
 **Step 1: Write the failing tests**
@@ -854,9 +854,9 @@ git commit -m "feat: Google Calendar client for busy blocks"
 ```python
 # tests/test_sync.py
 from unittest.mock import MagicMock
-from cal_sync.sync import run_sync
-from cal_sync.diff import Event
-from cal_sync.state import SyncState
+from calsync.sync import run_sync
+from calsync.diff import Event
+from calsync.state import SyncState
 
 
 def test_sync_creates_new_events(tmp_path):
@@ -909,12 +909,12 @@ Expected: FAIL — `ImportError`
 **Step 3: Write minimal implementation**
 
 ```python
-# cal_sync/sync.py
+# calsync/sync.py
 import logging
 
-from cal_sync.diff import Event, compute_diff
-from cal_sync.google_cal import GoogleCalClient
-from cal_sync.state import SyncState
+from calsync.diff import Event, compute_diff
+from calsync.google_cal import GoogleCalClient
+from calsync.state import SyncState
 
 logger = logging.getLogger(__name__)
 
@@ -947,7 +947,7 @@ Expected: 3 passed
 **Step 5: Commit**
 
 ```bash
-git add cal_sync/sync.py tests/test_sync.py
+git add calsync/sync.py tests/test_sync.py
 git commit -m "feat: sync orchestration with diff-based updates"
 ```
 
@@ -956,27 +956,27 @@ git commit -m "feat: sync orchestration with diff-based updates"
 ### Task 8: CLI Entry Point
 
 **Files:**
-- Create: `cal_sync/cli.py`
+- Create: `calsync/cli.py`
 
 **Step 1: Write the CLI**
 
 No TDD here — this is the thin wiring layer that connects all the tested components.
 
 ```python
-# cal_sync/cli.py
+# calsync/cli.py
 import argparse
 import logging
 import sys
 from pathlib import Path
 
-from cal_sync.config import load_config
-from cal_sync.google_cal import GoogleCalClient, authenticate, build_service
-from cal_sync.icloud import fetch_icloud_events
-from cal_sync.state import SyncState
-from cal_sync.sync import run_sync
+from calsync.config import load_config
+from calsync.google_cal import GoogleCalClient, authenticate, build_service
+from calsync.icloud import fetch_icloud_events
+from calsync.state import SyncState
+from calsync.sync import run_sync
 
 LOG_DIR = Path.home() / ".local" / "log"
-LOG_FILE = LOG_DIR / "cal-sync.log"
+LOG_FILE = LOG_DIR / "calsync.log"
 
 
 def setup_logging():
@@ -1043,7 +1043,7 @@ Expected: All 14 tests pass
 **Step 3: Commit**
 
 ```bash
-git add cal_sync/cli.py
+git add calsync/cli.py
 git commit -m "feat: CLI entry point with auth and sync commands"
 ```
 
@@ -1052,7 +1052,7 @@ git commit -m "feat: CLI entry point with auth and sync commands"
 ### Task 9: launchd Plist & README
 
 **Files:**
-- Create: `com.cal-sync.plist`
+- Create: `com.calsync.plist`
 - Create: `README.md`
 
 **Step 1: Create the launchd plist**
@@ -1063,10 +1063,10 @@ git commit -m "feat: CLI entry point with auth and sync commands"
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.cal-sync</string>
+    <string>com.calsync</string>
     <key>ProgramArguments</key>
     <array>
-        <string>VENV_PATH/bin/cal-sync</string>
+        <string>VENV_PATH/bin/calsync</string>
         <string>--config</string>
         <string>PROJECT_PATH/config.yaml</string>
         <string>--state</string>
@@ -1077,9 +1077,9 @@ git commit -m "feat: CLI entry point with auth and sync commands"
     <key>StartInterval</key>
     <integer>900</integer>
     <key>StandardOutPath</key>
-    <string>LOG_PATH/cal-sync-stdout.log</string>
+    <string>LOG_PATH/calsync-stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>LOG_PATH/cal-sync-stderr.log</string>
+    <string>LOG_PATH/calsync-stderr.log</string>
     <key>RunAtLoad</key>
     <true/>
 </dict>
@@ -1099,7 +1099,7 @@ Document:
 **Step 3: Commit**
 
 ```bash
-git add com.cal-sync.plist README.md
+git add com.calsync.plist README.md
 git commit -m "docs: launchd plist and README with setup instructions"
 ```
 
@@ -1114,10 +1114,10 @@ Expected: All 14 tests pass
 
 **Step 2: Manual smoke test (with real credentials)**
 
-Run: `python -m cal_sync.cli --config config.yaml --auth`
+Run: `python -m calsync.cli --config config.yaml --auth`
 Expected: Browser opens for Google OAuth consent, token saved
 
-Run: `python -m cal_sync.cli --config config.yaml`
+Run: `python -m calsync.cli --config config.yaml`
 Expected: Events fetched from iCloud, busy blocks created on Google Calendar
 
 **Step 3: Final commit if any fixes needed**

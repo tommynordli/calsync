@@ -7,8 +7,8 @@ from pathlib import Path
 import caldav
 import yaml
 
-from cal_sync.google_cal import authenticate
-from cal_sync.icloud import ICLOUD_CALDAV_URL
+from calsync.google_cal import authenticate
+from calsync.icloud import ICLOUD_CALDAV_URL
 
 CONFIG_DIR = Path.home() / ".config" / "calsync"
 PLIST_DEST = Path.home() / "Library" / "LaunchAgents" / "com.calsync.plist"
@@ -130,7 +130,7 @@ def run_setup():
     answer = _prompt("Run a test sync now?", "y")
     if answer.lower() in ("y", "yes"):
         result = subprocess.run(
-            [sys.executable, "-m", "cal_sync.cli", "--config", str(config_path)],
+            [sys.executable, "-m", "calsync.cli", "--config", str(config_path)],
         )
         if result.returncode != 0:
             print("Test sync failed. Check the output above.")
@@ -154,7 +154,7 @@ def _install_launchd():
         print("Could not find calsync on PATH. Is it installed?")
         return
 
-    ref = importlib.resources.files("cal_sync").joinpath("com.calsync.plist")
+    ref = importlib.resources.files("calsync").joinpath("com.calsync.plist")
     content = ref.read_text(encoding="utf-8")
 
     log_path = Path.home() / ".local" / "log"

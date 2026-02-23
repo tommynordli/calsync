@@ -7,7 +7,7 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from cal_sync.diff import Event
+from calsync.diff import Event
 
 logger = logging.getLogger(__name__)
 

@@ -51,7 +51,7 @@ All synced Google events are opaque "Busy" blocks with the iCloud UID stored in 
 - Config/credentials: `~/.config/calsync/` (config.yaml, credentials.json, token.json)
 - Logs: `~/.local/log/calsync.log`
 - Launchd plist: `~/Library/LaunchAgents/com.calsync.plist`
-- Plist template: bundled as package data in `cal_sync/com.calsync.plist`, loaded via `importlib.resources`
+- Plist template: bundled as package data in `calsync/com.calsync.plist`, loaded via `importlib.resources`
 
 ## Test Patterns
 

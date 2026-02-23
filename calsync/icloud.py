@@ -1,10 +1,10 @@
-# cal_sync/icloud.py
+# calsync/icloud.py
 import logging
 from datetime import date, datetime, timedelta, timezone
 
 import caldav
 
-from cal_sync.diff import Event
+from calsync.diff import Event
 
 logger = logging.getLogger(__name__)
 

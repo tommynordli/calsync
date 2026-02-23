@@ -1,8 +1,8 @@
 # tests/test_icloud.py
 from unittest.mock import MagicMock, patch
 from datetime import datetime, timezone
-from cal_sync.icloud import fetch_icloud_events
-from cal_sync.diff import Event
+from calsync.icloud import fetch_icloud_events
+from calsync.diff import Event
 
 
 def _make_mock_vevent(uid, dtstart, dtend, status="CONFIRMED"):
@@ -35,7 +35,7 @@ def _make_mock_caldav_event(uid, dtstart, dtend, status="CONFIRMED"):
     return event
 
 
-@patch("cal_sync.icloud.caldav.DAVClient")
+@patch("calsync.icloud.caldav.DAVClient")
 def test_fetch_events_basic(mock_client_class):
     mock_client = MagicMock()
     mock_client_class.return_value = mock_client
@@ -61,7 +61,7 @@ def test_fetch_events_basic(mock_client_class):
     assert events[0].all_day is False
 
 
-@patch("cal_sync.icloud.caldav.DAVClient")
+@patch("calsync.icloud.caldav.DAVClient")
 def test_fetch_skips_cancelled(mock_client_class):
     mock_client = MagicMock()
     mock_client_class.return_value = mock_client
@@ -85,7 +85,7 @@ def test_fetch_skips_cancelled(mock_client_class):
     assert len(events) == 0
 
 
-@patch("cal_sync.icloud.caldav.DAVClient")
+@patch("calsync.icloud.caldav.DAVClient")
 def test_fetch_recurring_events_unique_uids(mock_client_class):
     mock_client = MagicMock()
     mock_client_class.return_value = mock_client
