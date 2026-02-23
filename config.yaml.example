@@ -1,0 +1,14 @@
+icloud:
+  username: "your@icloud.com"
+  app_password: "xxxx-xxxx-xxxx-xxxx"
+  calendars:
+    - "Personal"
+    - "Family"
+
+google:
+  calendar_id: "your.work@gmail.com"
+  credentials_file: "credentials.json"
+  token_file: "token.json"
+
+sync:
+  lookahead_days: 30
