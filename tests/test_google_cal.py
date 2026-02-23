@@ -2,6 +2,8 @@ from unittest.mock import MagicMock, patch
 from pathlib import Path
 from cal_sync.google_cal import GoogleCalClient
 from cal_sync.diff import Event
+from googleapiclient.errors import HttpError
+import httplib2
 
 
 def _mock_service():
@@ -59,3 +61,13 @@ def test_delete_busy_block():
     client.delete_busy_block("gid-1")
 
     events_resource.delete.assert_called_once_with(calendarId="work@gmail.com", eventId="gid-1")
+
+
+def test_delete_already_gone():
+    service, events_resource = _mock_service()
+    resp = httplib2.Response({"status": 404})
+    events_resource.delete.return_value.execute.side_effect = HttpError(resp, b"Not Found")
+
+    client = GoogleCalClient(service=service, calendar_id="work@gmail.com")
+    # Should not raise
+    client.delete_busy_block("gid-deleted")

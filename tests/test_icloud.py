@@ -83,3 +83,46 @@ def test_fetch_skips_cancelled(mock_client_class):
     )
 
     assert len(events) == 0
+
+
+@patch("cal_sync.icloud.caldav.DAVClient")
+def test_fetch_recurring_events_unique_uids(mock_client_class):
+    mock_client = MagicMock()
+    mock_client_class.return_value = mock_client
+    mock_principal = MagicMock()
+    mock_client.principal.return_value = mock_principal
+
+    cal = MagicMock()
+    cal.name = "Personal"
+
+    # Two occurrences of same recurring event (same base UID)
+    dt1 = datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc)
+    dt2 = datetime(2026, 3, 1, 11, 0, tzinfo=timezone.utc)
+    dt3 = datetime(2026, 3, 8, 10, 0, tzinfo=timezone.utc)
+    dt4 = datetime(2026, 3, 8, 11, 0, tzinfo=timezone.utc)
+
+    event1 = _make_mock_caldav_event("recurring-uid", dt1, dt2)
+    # Add recurrence-id to first occurrence
+    rid1 = MagicMock()
+    rid1.value = dt1
+    event1.vobject_instance.vevent.contents["recurrence-id"] = [rid1]
+
+    event2 = _make_mock_caldav_event("recurring-uid", dt3, dt4)
+    rid2 = MagicMock()
+    rid2.value = dt3
+    event2.vobject_instance.vevent.contents["recurrence-id"] = [rid2]
+
+    cal.search.return_value = [event1, event2]
+    mock_principal.calendars.return_value = [cal]
+
+    events = fetch_icloud_events(
+        username="test@icloud.com",
+        app_password="password",
+        calendar_names=["Personal"],
+        lookahead_days=30,
+    )
+
+    assert len(events) == 2
+    assert events[0].uid != events[1].uid  # UIDs should be unique
+    assert "recurring-uid" in events[0].uid
+    assert "recurring-uid" in events[1].uid

@@ -5,6 +5,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 from cal_sync.diff import Event
 
@@ -52,8 +53,8 @@ class GoogleCalClient:
             body["start"] = {"date": event.start}
             body["end"] = {"date": event.end}
         else:
-            body["start"] = {"dateTime": event.start}
-            body["end"] = {"dateTime": event.end}
+            body["start"] = {"dateTime": event.start, "timeZone": "UTC"}
+            body["end"] = {"dateTime": event.end, "timeZone": "UTC"}
         return body
 
     def create_busy_block(self, event: Event) -> str:
@@ -72,7 +73,13 @@ class GoogleCalClient:
         logger.info("Updated busy block: %s", google_event_id)
 
     def delete_busy_block(self, google_event_id: str):
-        self.service.events().delete(
-            calendarId=self.calendar_id, eventId=google_event_id
-        ).execute()
-        logger.info("Deleted busy block: %s", google_event_id)
+        try:
+            self.service.events().delete(
+                calendarId=self.calendar_id, eventId=google_event_id
+            ).execute()
+            logger.info("Deleted busy block: %s", google_event_id)
+        except HttpError as e:
+            if e.resp.status == 404:
+                logger.warning("Event %s already deleted from Google Calendar", google_event_id)
+            else:
+                raise

@@ -60,6 +60,10 @@ def _parse_vevent(vevent) -> Event | None:
         return None
 
     uid = contents["uid"][0].value
+    if "recurrence-id" in contents:
+        recurrence_id = contents["recurrence-id"][0].value
+        rid_str = recurrence_id.isoformat() if hasattr(recurrence_id, 'isoformat') else str(recurrence_id)
+        uid = f"{uid}_{rid_str}"
     dtstart = contents["dtstart"][0].value
     dtend = contents["dtend"][0].value if "dtend" in contents else None
 

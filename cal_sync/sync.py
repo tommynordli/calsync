@@ -16,13 +16,14 @@ def run_sync(events: list[Event], state: SyncState, gcal: GoogleCalClient):
     for event in to_create:
         google_id = gcal.create_busy_block(event)
         state.set(event.uid, google_id, event.start, event.end, event.all_day)
+        state.save()
 
     for event, google_id in to_update:
         gcal.update_busy_block(google_id, event)
         state.set(event.uid, google_id, event.start, event.end, event.all_day)
+        state.save()
 
     for icloud_uid, google_id in to_delete:
         gcal.delete_busy_block(google_id)
         state.remove(icloud_uid)
-
-    state.save()
+        state.save()
