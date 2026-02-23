@@ -1,5 +1,5 @@
 from pathlib import Path
-from cal_sync.config import load_config
+from calsync.config import load_config
 
 
 def test_load_config(tmp_path):

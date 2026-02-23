@@ -1,8 +1,8 @@
 # tests/test_sync.py
 from unittest.mock import MagicMock
-from cal_sync.sync import run_sync
-from cal_sync.diff import Event
-from cal_sync.state import SyncState
+from calsync.sync import run_sync
+from calsync.diff import Event
+from calsync.state import SyncState
 
 
 def test_sync_creates_new_events(tmp_path):

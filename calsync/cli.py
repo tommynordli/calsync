@@ -1,14 +1,14 @@
-# cal_sync/cli.py
+# calsync/cli.py
 import argparse
 import logging
 import sys
 from pathlib import Path
 
-from cal_sync.config import load_config
-from cal_sync.google_cal import GoogleCalClient, authenticate, build_service
-from cal_sync.icloud import fetch_icloud_events
-from cal_sync.state import SyncState
-from cal_sync.sync import run_sync
+from calsync.config import load_config
+from calsync.google_cal import GoogleCalClient, authenticate, build_service
+from calsync.icloud import fetch_icloud_events
+from calsync.state import SyncState
+from calsync.sync import run_sync
 
 LOG_DIR = Path.home() / ".local" / "log"
 LOG_FILE = LOG_DIR / "calsync.log"
@@ -36,7 +36,7 @@ def main():
     args = parser.parse_args()
 
     if args.setup:
-        from cal_sync.setup import run_setup
+        from calsync.setup import run_setup
         run_setup()
         return
 

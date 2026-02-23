@@ -1,9 +1,9 @@
-# cal_sync/sync.py
+# calsync/sync.py
 import logging
 
-from cal_sync.diff import Event, compute_diff
-from cal_sync.google_cal import GoogleCalClient
-from cal_sync.state import SyncState
+from calsync.diff import Event, compute_diff
+from calsync.google_cal import GoogleCalClient
+from calsync.state import SyncState
 
 logger = logging.getLogger(__name__)
 

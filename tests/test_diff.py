@@ -1,4 +1,4 @@
-from cal_sync.diff import Event, compute_diff
+from calsync.diff import Event, compute_diff
 
 
 def test_new_event_creates():

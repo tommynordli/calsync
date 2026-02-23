@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 from pathlib import Path
-from cal_sync.google_cal import GoogleCalClient
-from cal_sync.diff import Event
+from calsync.google_cal import GoogleCalClient
+from calsync.diff import Event
 from googleapiclient.errors import HttpError
 import httplib2
 

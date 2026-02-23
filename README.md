@@ -11,7 +11,7 @@ Syncs iCloud calendar events to a Google Calendar as "Busy" blocks. Runs every 1
 ## Install
 
 ```bash
-uv tool install "calsync @ git+https://github.com/<owner>/<repo>"
+uv tool install "calsync @ git+https://github.com/tommynordli/calsync"
 calsync --setup
 ```
 
@@ -20,7 +20,7 @@ The setup wizard walks you through everything interactively: iCloud credentials,
 ## Development Setup
 
 ```bash
-git clone <repo-url> && cd calsync
+git clone https://github.com/tommynordli/calsync && cd calsync
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"

@@ -1,4 +1,4 @@
-# cal_sync/state.py
+# calsync/state.py
 import json
 from pathlib import Path
 

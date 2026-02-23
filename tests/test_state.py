@@ -1,6 +1,6 @@
 # tests/test_state.py
 import json
-from cal_sync.state import SyncState
+from calsync.state import SyncState
 
 
 def test_load_empty(tmp_path):

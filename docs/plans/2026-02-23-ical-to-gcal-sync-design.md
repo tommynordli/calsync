@@ -94,4 +94,4 @@ sync:
 
 ## Logging
 
-File log at `~/.local/log/cal-sync.log`.
+File log at `~/.local/log/calsync.log`.
