@@ -6,7 +6,7 @@
     <string>com.cal-sync</string>
     <key>ProgramArguments</key>
     <array>
-        <string>VENV_PATH/bin/cal-sync</string>
+        <string>VENV_PATH/bin/calsync</string>
         <string>--config</string>
         <string>PROJECT_PATH/config.yaml</string>
         <string>--state</string>

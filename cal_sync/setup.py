@@ -9,8 +9,8 @@ import yaml
 from cal_sync.google_cal import authenticate
 from cal_sync.icloud import ICLOUD_CALDAV_URL
 
-PLIST_TEMPLATE = "com.cal-sync.plist"
-PLIST_DEST = Path.home() / "Library" / "LaunchAgents" / "com.cal-sync.plist"
+PLIST_TEMPLATE = "com.calsync.plist"
+PLIST_DEST = Path.home() / "Library" / "LaunchAgents" / "com.calsync.plist"
 
 
 def _prompt(message: str, default: str = "") -> str:
@@ -45,7 +45,7 @@ def _pick_calendars(names: list[str]) -> list[str]:
 
 
 def run_setup(project_dir: Path):
-    print("=== cal-sync setup ===\n")
+    print("=== calsync setup ===\n")
 
     # Step 1: iCloud credentials
     print("Step 1: iCloud credentials")
@@ -166,4 +166,4 @@ def _install_launchd(project_dir: Path):
     print(f"Plist installed to {PLIST_DEST}")
 
     subprocess.run(["launchctl", "load", str(PLIST_DEST)])
-    print("Scheduler loaded. cal-sync will run every 15 minutes.")
+    print("Scheduler loaded. calsync will run every 15 minutes.")
