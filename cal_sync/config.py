@@ -23,12 +23,19 @@ def load_config(path: Path) -> Config:
     google = raw["google"]
     sync = raw.get("sync", {})
 
+    config_dir = path.parent
+
+    def _resolve(p: str) -> Path:
+        """Resolve relative paths against the config file's directory."""
+        fp = Path(p)
+        return fp if fp.is_absolute() else config_dir / fp
+
     return Config(
         icloud_username=icloud["username"],
         icloud_app_password=icloud["app_password"],
         icloud_calendars=icloud["calendars"],
         google_calendar_id=google["calendar_id"],
-        google_credentials_file=Path(google["credentials_file"]),
-        google_token_file=Path(google["token_file"]),
+        google_credentials_file=_resolve(google["credentials_file"]),
+        google_token_file=_resolve(google["token_file"]),
         lookahead_days=sync.get("lookahead_days", 30),
     )

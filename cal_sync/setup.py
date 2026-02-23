@@ -1,3 +1,4 @@
+import importlib.resources
 import shutil
 import subprocess
 import sys
@@ -9,7 +10,7 @@ import yaml
 from cal_sync.google_cal import authenticate
 from cal_sync.icloud import ICLOUD_CALDAV_URL
 
-PLIST_TEMPLATE = "com.calsync.plist"
+CONFIG_DIR = Path.home() / ".config" / "calsync"
 PLIST_DEST = Path.home() / "Library" / "LaunchAgents" / "com.calsync.plist"
 
 
@@ -44,7 +45,8 @@ def _pick_calendars(names: list[str]) -> list[str]:
     return [names[i] for i in indices if 0 <= i < len(names)]
 
 
-def run_setup(project_dir: Path):
+def run_setup():
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     print("=== calsync setup ===\n")
 
     # Step 1: iCloud credentials
@@ -78,7 +80,7 @@ def run_setup(project_dir: Path):
     calendar_id = _prompt("Google work calendar ID (usually your work email)")
 
     # Step 4: Google OAuth credentials
-    credentials_file = project_dir / "credentials.json"
+    credentials_file = CONFIG_DIR / "credentials.json"
     if not credentials_file.exists():
         print(f"\nGoogle OAuth credentials file not found at: {credentials_file}")
         print("To get it:")
@@ -108,7 +110,7 @@ def run_setup(project_dir: Path):
             "lookahead_days": 30,
         },
     }
-    config_path = project_dir / "config.yaml"
+    config_path = CONFIG_DIR / "config.yaml"
     with open(config_path, "w") as f:
         yaml.dump(config, f, default_flow_style=False)
     print(f"\nConfig written to {config_path}")
@@ -117,7 +119,7 @@ def run_setup(project_dir: Path):
     print("\nStep 3: Google OAuth")
     print("A browser window will open for Google authorization...")
     try:
-        authenticate(credentials_file, project_dir / "token.json")
+        authenticate(credentials_file, CONFIG_DIR / "token.json")
         print("Google authentication complete.")
     except Exception as e:
         print(f"Google auth failed: {e}")
@@ -129,7 +131,6 @@ def run_setup(project_dir: Path):
     if answer.lower() in ("y", "yes"):
         result = subprocess.run(
             [sys.executable, "-m", "cal_sync.cli", "--config", str(config_path)],
-            cwd=project_dir,
         )
         if result.returncode != 0:
             print("Test sync failed. Check the output above.")
@@ -140,26 +141,27 @@ def run_setup(project_dir: Path):
     print("\nStep 5: Automatic scheduling")
     answer = _prompt("Install launchd plist to run every 15 minutes?", "y")
     if answer.lower() in ("y", "yes"):
-        _install_launchd(project_dir)
+        _install_launchd()
     else:
         print("Skipped. You can install it later — see README.md.")
 
     print("\nSetup complete!")
 
 
-def _install_launchd(project_dir: Path):
-    template = project_dir / PLIST_TEMPLATE
-    if not template.exists():
-        print(f"Plist template not found at {template}")
+def _install_launchd():
+    calsync_bin = shutil.which("calsync")
+    if not calsync_bin:
+        print("Could not find calsync on PATH. Is it installed?")
         return
 
-    venv_path = project_dir / ".venv"
+    ref = importlib.resources.files("cal_sync").joinpath("com.calsync.plist")
+    content = ref.read_text(encoding="utf-8")
+
     log_path = Path.home() / ".local" / "log"
     log_path.mkdir(parents=True, exist_ok=True)
 
-    content = template.read_text()
-    content = content.replace("VENV_PATH", str(venv_path))
-    content = content.replace("PROJECT_PATH", str(project_dir))
+    content = content.replace("VENV_PATH/bin/calsync", calsync_bin)
+    content = content.replace("PROJECT_PATH", str(CONFIG_DIR))
     content = content.replace("LOG_PATH", str(log_path))
 
     PLIST_DEST.write_text(content)

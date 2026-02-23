@@ -23,8 +23,8 @@ sync:
     assert config.icloud_app_password == "abcd-efgh-ijkl-mnop"
     assert config.icloud_calendars == ["Personal", "Family"]
     assert config.google_calendar_id == "work@gmail.com"
-    assert config.google_credentials_file == Path("creds.json")
-    assert config.google_token_file == Path("tok.json")
+    assert config.google_credentials_file == tmp_path / "creds.json"
+    assert config.google_token_file == tmp_path / "tok.json"
     assert config.lookahead_days == 14
 
 

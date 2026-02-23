@@ -17,5 +17,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-mock>=3.12"]
 
+[tool.setuptools.package-data]
+cal_sync = ["com.calsync.plist"]
+
 [project.scripts]
 calsync = "cal_sync.cli:main"
