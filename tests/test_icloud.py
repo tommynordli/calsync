@@ -46,7 +46,7 @@ def test_fetch_events_basic(mock_client_class):
     cal.name = "Personal"
     dt1 = datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc)
     dt2 = datetime(2026, 3, 1, 11, 0, tzinfo=timezone.utc)
-    cal.search.return_value = [_make_mock_caldav_event("uid-1", dt1, dt2)]
+    cal.date_search.return_value = [_make_mock_caldav_event("uid-1", dt1, dt2)]
     mock_principal.calendars.return_value = [cal]
 
     events = fetch_icloud_events(
@@ -72,7 +72,7 @@ def test_fetch_skips_cancelled(mock_client_class):
     cal.name = "Personal"
     dt1 = datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc)
     dt2 = datetime(2026, 3, 1, 11, 0, tzinfo=timezone.utc)
-    cal.search.return_value = [_make_mock_caldav_event("uid-1", dt1, dt2, status="CANCELLED")]
+    cal.date_search.return_value = [_make_mock_caldav_event("uid-1", dt1, dt2, status="CANCELLED")]
     mock_principal.calendars.return_value = [cal]
 
     events = fetch_icloud_events(
@@ -112,7 +112,7 @@ def test_fetch_recurring_events_unique_uids(mock_client_class):
     rid2.value = dt3
     event2.vobject_instance.vevent.contents["recurrence-id"] = [rid2]
 
-    cal.search.return_value = [event1, event2]
+    cal.date_search.return_value = [event1, event2]
     mock_principal.calendars.return_value = [cal]
 
     events = fetch_icloud_events(

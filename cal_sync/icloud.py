@@ -37,7 +37,7 @@ def fetch_icloud_events(
     events: list[Event] = []
     for cal in target_cals:
         logger.info("Fetching events from '%s'", cal.name)
-        results = cal.search(start=start, end=end, event=True, expand=True)
+        results = cal.date_search(start=start, end=end, expand=True)
         for item in results:
             try:
                 vevent = item.vobject_instance.vevent
