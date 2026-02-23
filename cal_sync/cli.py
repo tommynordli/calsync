@@ -31,7 +31,13 @@ def main():
     parser.add_argument("--config", type=Path, default=Path("config.yaml"), help="Path to config file")
     parser.add_argument("--state", type=Path, default=Path("state.json"), help="Path to state file")
     parser.add_argument("--auth", action="store_true", help="Run OAuth flow and exit")
+    parser.add_argument("--setup", action="store_true", help="Interactive setup wizard")
     args = parser.parse_args()
+
+    if args.setup:
+        from cal_sync.setup import run_setup
+        run_setup(Path.cwd())
+        return
 
     setup_logging()
     logger = logging.getLogger(__name__)
