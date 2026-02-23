@@ -11,7 +11,7 @@ from cal_sync.state import SyncState
 from cal_sync.sync import run_sync
 
 LOG_DIR = Path.home() / ".local" / "log"
-LOG_FILE = LOG_DIR / "cal-sync.log"
+LOG_FILE = LOG_DIR / "calsync.log"
 
 
 def setup_logging():

@@ -37,21 +37,21 @@ If you prefer to set things up manually:
 6. Install the launchd plist:
 
    ```bash
-   cp com.cal-sync.plist ~/Library/LaunchAgents/
-   sed -i '' "s|VENV_PATH|$(pwd)/.venv|g" ~/Library/LaunchAgents/com.cal-sync.plist
-   sed -i '' "s|PROJECT_PATH|$(pwd)|g" ~/Library/LaunchAgents/com.cal-sync.plist
-   sed -i '' "s|LOG_PATH|$HOME/.local/log|g" ~/Library/LaunchAgents/com.cal-sync.plist
-   launchctl load ~/Library/LaunchAgents/com.cal-sync.plist
+   cp com.calsync.plist ~/Library/LaunchAgents/
+   sed -i '' "s|VENV_PATH|$(pwd)/.venv|g" ~/Library/LaunchAgents/com.calsync.plist
+   sed -i '' "s|PROJECT_PATH|$(pwd)|g" ~/Library/LaunchAgents/com.calsync.plist
+   sed -i '' "s|LOG_PATH|$HOME/.local/log|g" ~/Library/LaunchAgents/com.calsync.plist
+   launchctl load ~/Library/LaunchAgents/com.calsync.plist
    ```
 
 ## Logs
 
-Application logs are written to `~/.local/log/cal-sync.log`.
+Application logs are written to `~/.local/log/calsync.log`.
 
 ## Uninstall
 
 ```bash
-launchctl unload ~/Library/LaunchAgents/com.cal-sync.plist
-rm ~/Library/LaunchAgents/com.cal-sync.plist
+launchctl unload ~/Library/LaunchAgents/com.calsync.plist
+rm ~/Library/LaunchAgents/com.calsync.plist
 rm -rf .venv
 ```

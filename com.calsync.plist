@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.cal-sync</string>
+    <string>com.calsync</string>
     <key>ProgramArguments</key>
     <array>
         <string>VENV_PATH/bin/calsync</string>
@@ -17,9 +17,9 @@
     <key>StartInterval</key>
     <integer>900</integer>
     <key>StandardOutPath</key>
-    <string>LOG_PATH/cal-sync-stdout.log</string>
+    <string>LOG_PATH/calsync-stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>LOG_PATH/cal-sync-stderr.log</string>
+    <string>LOG_PATH/calsync-stderr.log</string>
     <key>RunAtLoad</key>
     <true/>
 </dict>
