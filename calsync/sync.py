@@ -36,12 +36,14 @@ def run_sync(
 
     for event in to_create:
         google_id = gcal.create_event(event, busy_only=busy_only)
-        state.set(event.uid, google_id, event.start, event.end, event.all_day)
+        state.set(event.uid, google_id, event.start, event.end, event.all_day,
+                  title=event.title, location=event.location, description=event.description)
         state.save()
 
     for event, google_id in to_update:
         gcal.update_event(google_id, event, busy_only=busy_only)
-        state.set(event.uid, google_id, event.start, event.end, event.all_day)
+        state.set(event.uid, google_id, event.start, event.end, event.all_day,
+                  title=event.title, location=event.location, description=event.description)
         state.save()
 
     for icloud_uid, google_id in to_delete:
@@ -90,6 +92,8 @@ def purge_events(state: SyncState, gcal: GoogleCalClient):
 
     for uid, entry in list(state.entries.items()):
         gcal.delete_event(entry["google_event_id"])
+        state.remove(uid)
+        state.save()
         logger.info("Purged %s", uid)
 
     state.clear()

@@ -69,16 +69,21 @@ def main():
             calendar_id = resolve_calendar_by_name(args.calendar, calendars)
             logger.info("Resolved calendar '%s' to ID: %s", args.calendar, calendar_id)
 
-        gcal = GoogleCalClient(service=service, calendar_id=calendar_id)
         state = SyncState(args.state)
 
         # Handle purge
         if args.purge:
+            gcal = GoogleCalClient(service=service, calendar_id=calendar_id)
             purge_events(state, gcal)
             return
 
-        # Handle calendar switch
-        handle_calendar_switch(state, calendar_id, gcal)
+        # Handle calendar switch — delete from old calendar, not new one
+        old_calendar_id = state.metadata.get("target_calendar_id")
+        if old_calendar_id and old_calendar_id != calendar_id:
+            old_gcal = GoogleCalClient(service=service, calendar_id=old_calendar_id)
+            handle_calendar_switch(state, calendar_id, old_gcal)
+
+        gcal = GoogleCalClient(service=service, calendar_id=calendar_id)
 
         # Determine busy_only — CLI flag overrides config
         busy_only = args.busy_only or config.busy_only

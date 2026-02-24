@@ -85,3 +85,26 @@ def test_event_detail_fields_default_empty():
     assert event.title == ""
     assert event.location == ""
     assert event.description == ""
+
+
+def test_title_change_triggers_update():
+    events = [Event(uid="uid-1", start="2026-03-01T10:00:00", end="2026-03-01T11:00:00",
+                    all_day=False, title="New title")]
+    state_entries = {
+        "uid-1": {"google_event_id": "gid-1", "start": "2026-03-01T10:00:00", "end": "2026-03-01T11:00:00",
+                  "all_day": False, "title": "Old title", "location": "", "description": ""},
+    }
+    to_create, to_update, to_delete = compute_diff(events, state_entries)
+    assert len(to_update) == 1
+    assert to_update[0] == (events[0], "gid-1")
+
+
+def test_detail_unchanged_no_update():
+    events = [Event(uid="uid-1", start="2026-03-01T10:00:00", end="2026-03-01T11:00:00",
+                    all_day=False, title="Meeting", location="Room A", description="Notes")]
+    state_entries = {
+        "uid-1": {"google_event_id": "gid-1", "start": "2026-03-01T10:00:00", "end": "2026-03-01T11:00:00",
+                  "all_day": False, "title": "Meeting", "location": "Room A", "description": "Notes"},
+    }
+    to_create, to_update, to_delete = compute_diff(events, state_entries)
+    assert to_update == []
