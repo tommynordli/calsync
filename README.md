@@ -12,7 +12,7 @@ Syncs iCloud calendar events to a Google Calendar as "Busy" blocks. Runs every 1
 
 ```bash
 uv tool install "calsync @ git+https://github.com/tommynordli/calsync"
-calsync --setup
+calsync setup
 ```
 
 The setup wizard walks you through everything interactively: iCloud credentials, calendar selection, Google OAuth, a test sync, and launchd installation. All config is stored in `~/.config/calsync/`.
@@ -24,7 +24,7 @@ git clone https://github.com/tommynordli/calsync && cd calsync
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-calsync --setup
+calsync setup
 ```
 
 ## Manual Setup
@@ -37,9 +37,9 @@ If you prefer to set things up manually:
 
 3. Create a Google Cloud project, enable the **Google Calendar API**, create OAuth 2.0 credentials (desktop app), and save the downloaded JSON as `~/.config/calsync/credentials.json`.
 
-4. Run `calsync --auth` to complete the Google OAuth flow.
+4. Run `calsync auth` to complete the Google OAuth flow.
 
-5. Test with `calsync`.
+5. Test with `calsync sync`.
 
 ## Logs
 
