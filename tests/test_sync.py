@@ -1,6 +1,6 @@
 # tests/test_sync.py
 from unittest.mock import MagicMock
-from calsync.sync import run_sync
+from calsync.sync import run_sync, handle_calendar_switch, purge_events
 from calsync.diff import Event
 from calsync.state import SyncState
 
@@ -90,3 +90,87 @@ def test_sync_saves_metadata(tmp_path):
     reloaded = SyncState(tmp_path / "state.json")
     assert reloaded.metadata["busy_only"] is False
     assert reloaded.metadata["target_calendar_id"] == "cal123"
+
+
+def test_handle_calendar_switch_deletes_old(tmp_path, monkeypatch):
+    state = SyncState(tmp_path / "state.json")
+    state.set("uid-1", "gid-1", "2026-03-01T10:00:00", "2026-03-01T11:00:00", False)
+    state.set("uid-2", "gid-2", "2026-03-02T10:00:00", "2026-03-02T11:00:00", False)
+    state.set_metadata("target_calendar_id", "old@gmail.com")
+    state.save()
+
+    old_gcal = MagicMock()
+    monkeypatch.setattr("builtins.input", lambda _: "y")
+
+    switched = handle_calendar_switch(state, "new@gmail.com", old_gcal)
+
+    assert switched is True
+    assert old_gcal.delete_event.call_count == 2
+    assert state.entries == {}
+
+
+def test_handle_calendar_switch_keep_old(tmp_path, monkeypatch):
+    state = SyncState(tmp_path / "state.json")
+    state.set("uid-1", "gid-1", "2026-03-01T10:00:00", "2026-03-01T11:00:00", False)
+    state.set_metadata("target_calendar_id", "old@gmail.com")
+    state.save()
+
+    old_gcal = MagicMock()
+    monkeypatch.setattr("builtins.input", lambda _: "n")
+
+    switched = handle_calendar_switch(state, "new@gmail.com", old_gcal)
+
+    assert switched is True
+    old_gcal.delete_event.assert_not_called()
+    assert state.entries == {}
+
+
+def test_handle_calendar_switch_no_switch(tmp_path):
+    state = SyncState(tmp_path / "state.json")
+    state.set_metadata("target_calendar_id", "same@gmail.com")
+    state.save()
+
+    gcal = MagicMock()
+    switched = handle_calendar_switch(state, "same@gmail.com", gcal)
+
+    assert switched is False
+
+
+def test_handle_calendar_switch_first_run(tmp_path):
+    state = SyncState(tmp_path / "state.json")
+    gcal = MagicMock()
+
+    switched = handle_calendar_switch(state, "work@gmail.com", gcal)
+
+    assert switched is False
+
+
+def test_purge_events(tmp_path, monkeypatch):
+    state = SyncState(tmp_path / "state.json")
+    state.set("uid-1", "gid-1", "2026-03-01T10:00:00", "2026-03-01T11:00:00", False)
+    state.set("uid-2", "gid-2", "2026-03-02T10:00:00", "2026-03-02T11:00:00", False)
+    state.set_metadata("target_calendar_id", "work@gmail.com")
+    state.save()
+
+    gcal = MagicMock()
+    monkeypatch.setattr("builtins.input", lambda _: "y")
+
+    purge_events(state, gcal)
+
+    assert gcal.delete_event.call_count == 2
+    reloaded = SyncState(tmp_path / "state.json")
+    assert reloaded.entries == {}
+    assert reloaded.metadata == {}
+
+
+def test_purge_events_cancel(tmp_path, monkeypatch):
+    state = SyncState(tmp_path / "state.json")
+    state.set("uid-1", "gid-1", "2026-03-01T10:00:00", "2026-03-01T11:00:00", False)
+    state.save()
+
+    gcal = MagicMock()
+    monkeypatch.setattr("builtins.input", lambda _: "n")
+
+    purge_events(state, gcal)
+
+    gcal.delete_event.assert_not_called()

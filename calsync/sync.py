@@ -54,3 +54,44 @@ def run_sync(
     if calendar_id:
         state.set_metadata("target_calendar_id", calendar_id)
     state.save()
+
+
+def handle_calendar_switch(state: SyncState, new_calendar_id: str, gcal: GoogleCalClient) -> bool:
+    old_calendar_id = state.metadata.get("target_calendar_id")
+    if not old_calendar_id or old_calendar_id == new_calendar_id:
+        return False
+
+    logger.info("Calendar switch detected: %s -> %s", old_calendar_id, new_calendar_id)
+    answer = input(
+        f"Events are currently synced to {old_calendar_id}. "
+        f"Delete them before syncing to {new_calendar_id}? (y/n): "
+    ).strip().lower()
+
+    if answer in ("y", "yes"):
+        for uid, entry in list(state.entries.items()):
+            gcal.delete_event(entry["google_event_id"])
+            logger.info("Deleted %s from old calendar", uid)
+
+    state.clear()
+    state.save()
+    return True
+
+
+def purge_events(state: SyncState, gcal: GoogleCalClient):
+    if not state.entries:
+        print("No synced events to purge.")
+        return
+
+    count = len(state.entries)
+    answer = input(f"Delete all {count} synced events and clear state? (y/n): ").strip().lower()
+    if answer not in ("y", "yes"):
+        print("Cancelled.")
+        return
+
+    for uid, entry in list(state.entries.items()):
+        gcal.delete_event(entry["google_event_id"])
+        logger.info("Purged %s", uid)
+
+    state.clear()
+    state.save()
+    print(f"Purged {count} events and cleared state.")
