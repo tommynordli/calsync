@@ -75,11 +75,7 @@ def run_setup():
         sys.exit(1)
     print(f"Selected: {', '.join(selected)}")
 
-    # Step 3: Google Calendar
-    print("\nStep 2: Google Calendar")
-    calendar_id = _prompt("Google work calendar ID (usually your work email)")
-
-    # Step 4: Google OAuth credentials
+    # Step 3: Google OAuth credentials
     credentials_file = CONFIG_DIR / "credentials.json"
     if not credentials_file.exists():
         print(f"\nGoogle OAuth credentials file not found at: {credentials_file}")
@@ -94,7 +90,40 @@ def run_setup():
             print("credentials.json still not found. Exiting.")
             sys.exit(1)
 
-    # Step 5: Write config
+    # Step 4: Google OAuth
+    print("\nStep 2: Google OAuth")
+    print("A browser window will open for Google authorization...")
+    try:
+        creds = authenticate(credentials_file, CONFIG_DIR / "token.json")
+        print("Google authentication complete.")
+    except Exception as e:
+        print(f"Google auth failed: {e}")
+        sys.exit(1)
+
+    # Step 5: Pick Google Calendar
+    from calsync.google_cal import build_service, list_owned_calendars
+    service = build_service(creds)
+    owned_calendars = list_owned_calendars(service)
+
+    if not owned_calendars:
+        print("No owned calendars found on this Google account.")
+        sys.exit(1)
+
+    print("\nStep 3: Choose target Google Calendar")
+    print("\nYour Google calendars:")
+    for i, cal in enumerate(owned_calendars, 1):
+        print(f"  {i}. {cal['name']}")
+    print()
+    pick = int(input("Which calendar to sync to? (number): ").strip()) - 1
+    calendar_id = owned_calendars[pick]["id"]
+    print(f"Selected: {owned_calendars[pick]['name']} ({calendar_id})")
+
+    # Step 6: Busy only?
+    print("\nStep 4: Event detail level")
+    answer = _prompt("Sync full event details (title, location, description)?", "y")
+    busy_only = answer.lower() not in ("y", "yes")
+
+    # Step 7: Write config
     config = {
         "icloud": {
             "username": username,
@@ -108,6 +137,7 @@ def run_setup():
         },
         "sync": {
             "lookahead_days": 30,
+            "busy_only": busy_only,
         },
     }
     config_path = CONFIG_DIR / "config.yaml"
@@ -115,18 +145,8 @@ def run_setup():
         yaml.dump(config, f, default_flow_style=False)
     print(f"\nConfig written to {config_path}")
 
-    # Step 6: Google OAuth
-    print("\nStep 3: Google OAuth")
-    print("A browser window will open for Google authorization...")
-    try:
-        authenticate(credentials_file, CONFIG_DIR / "token.json")
-        print("Google authentication complete.")
-    except Exception as e:
-        print(f"Google auth failed: {e}")
-        sys.exit(1)
-
-    # Step 7: Test sync
-    print("\nStep 4: Test sync")
+    # Step 8: Test sync
+    print("\nStep 5: Test sync")
     answer = _prompt("Run a test sync now?", "y")
     if answer.lower() in ("y", "yes"):
         result = subprocess.run(
@@ -137,8 +157,8 @@ def run_setup():
         else:
             print("Test sync succeeded!")
 
-    # Step 8: Install launchd
-    print("\nStep 5: Automatic scheduling")
+    # Step 9: Install launchd
+    print("\nStep 6: Automatic scheduling")
     answer = _prompt("Install launchd plist to run every 15 minutes?", "y")
     if answer.lower() in ("y", "yes"):
         _install_launchd()
