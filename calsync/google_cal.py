@@ -11,7 +11,10 @@ from calsync.diff import Event
 
 logger = logging.getLogger(__name__)
 
-SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
+SCOPES = [
+    "https://www.googleapis.com/auth/calendar.events",
+    "https://www.googleapis.com/auth/calendar.readonly",
+]
 
 
 def authenticate(credentials_file: Path, token_file: Path) -> Credentials:
