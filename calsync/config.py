@@ -13,6 +13,7 @@ class Config:
     google_credentials_file: Path
     google_token_file: Path
     lookahead_days: int
+    busy_only: bool
 
 
 def load_config(path: Path) -> Config:
@@ -38,4 +39,5 @@ def load_config(path: Path) -> Config:
         google_credentials_file=_resolve(google["credentials_file"]),
         google_token_file=_resolve(google["token_file"]),
         lookahead_days=sync.get("lookahead_days", 30),
+        busy_only=sync.get("busy_only", False),
     )
