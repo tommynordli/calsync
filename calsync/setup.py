@@ -150,7 +150,7 @@ def run_setup():
     answer = _prompt("Run a test sync now?", "y")
     if answer.lower() in ("y", "yes"):
         result = subprocess.run(
-            [sys.executable, "-m", "calsync.cli", "sync", "--config", str(config_path)],
+            [sys.executable, "-m", "calsync.cli", "--config", str(config_path), "sync"],
         )
         if result.returncode != 0:
             print("Test sync failed. Check the output above.")
