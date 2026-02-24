@@ -35,6 +35,15 @@ def build_service(creds: Credentials):
     return build("calendar", "v3", credentials=creds)
 
 
+def list_owned_calendars(service) -> list[dict]:
+    result = service.calendarList().list(minAccessRole="owner").execute()
+    return [
+        {"id": item["id"], "name": item["summary"]}
+        for item in result.get("items", [])
+        if item.get("accessRole") == "owner"
+    ]
+
+
 class GoogleCalClient:
     def __init__(self, service, calendar_id: str):
         self.service = service
