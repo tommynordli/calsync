@@ -120,8 +120,3 @@ class GoogleCalClient:
                 logger.warning("Event %s already deleted", google_event_id)
             else:
                 raise
-
-    # Aliases for backwards compatibility (removed in Task 12)
-    create_busy_block = create_event
-    update_busy_block = update_event
-    delete_busy_block = delete_event
