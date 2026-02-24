@@ -63,3 +63,25 @@ def test_mixed_operations():
     assert to_update[0] == (events[1], "gid-2")
     assert len(to_delete) == 1
     assert to_delete[0] == ("uid-3", "gid-3")
+
+
+def test_event_has_detail_fields():
+    event = Event(
+        uid="uid-1",
+        start="2026-03-01T10:00:00",
+        end="2026-03-01T11:00:00",
+        all_day=False,
+        title="Team standup",
+        location="Room 3B",
+        description="Daily sync",
+    )
+    assert event.title == "Team standup"
+    assert event.location == "Room 3B"
+    assert event.description == "Daily sync"
+
+
+def test_event_detail_fields_default_empty():
+    event = Event(uid="uid-1", start="2026-03-01T10:00:00", end="2026-03-01T11:00:00", all_day=False)
+    assert event.title == ""
+    assert event.location == ""
+    assert event.description == ""

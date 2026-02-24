@@ -7,6 +7,9 @@ class Event:
     start: str
     end: str
     all_day: bool
+    title: str = ""
+    location: str = ""
+    description: str = ""
 
 
 def compute_diff(
