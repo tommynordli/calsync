@@ -44,6 +44,21 @@ def list_owned_calendars(service) -> list[dict]:
     ]
 
 
+def resolve_calendar_by_name(name: str, calendars: list[dict]) -> str:
+    matches = [c for c in calendars if c["name"] == name]
+    if not matches:
+        available = ", ".join(c["name"] for c in calendars)
+        raise ValueError(f"No calendar found named '{name}'. Available: {available}")
+    if len(matches) == 1:
+        return matches[0]["id"]
+    # Duplicate names — ask user to pick
+    print(f"\nMultiple calendars named '{name}':")
+    for i, cal in enumerate(matches, 1):
+        print(f"  {i}. {cal['name']} ({cal['id']})")
+    pick = int(input("Pick a number: ").strip()) - 1
+    return matches[pick]["id"]
+
+
 class GoogleCalClient:
     def __init__(self, service, calendar_id: str):
         self.service = service

@@ -1,9 +1,10 @@
 from unittest.mock import MagicMock, patch
 from pathlib import Path
-from calsync.google_cal import GoogleCalClient, list_owned_calendars
+from calsync.google_cal import GoogleCalClient, list_owned_calendars, resolve_calendar_by_name
 from calsync.diff import Event
 from googleapiclient.errors import HttpError
 import httplib2
+import pytest
 
 
 def _mock_service():
@@ -147,3 +148,29 @@ def test_list_owned_calendars_empty():
 
     calendars = list_owned_calendars(service)
     assert calendars == []
+
+
+def test_resolve_calendar_by_name_unique():
+    calendars = [
+        {"id": "primary@gmail.com", "name": "Primary"},
+        {"id": "work@group.calendar.google.com", "name": "Work"},
+    ]
+    assert resolve_calendar_by_name("Work", calendars) == "work@group.calendar.google.com"
+
+
+def test_resolve_calendar_by_name_no_match():
+    calendars = [
+        {"id": "primary@gmail.com", "name": "Primary"},
+    ]
+    with pytest.raises(ValueError, match="No calendar found"):
+        resolve_calendar_by_name("Work", calendars)
+
+
+def test_resolve_calendar_by_name_duplicates(monkeypatch):
+    calendars = [
+        {"id": "work1@group.calendar.google.com", "name": "Work"},
+        {"id": "work2@group.calendar.google.com", "name": "Work"},
+    ]
+    monkeypatch.setattr("builtins.input", lambda _: "2")
+    result = resolve_calendar_by_name("Work", calendars)
+    assert result == "work2@group.calendar.google.com"
