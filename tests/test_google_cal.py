@@ -71,3 +71,54 @@ def test_delete_already_gone():
     client = GoogleCalClient(service=service, calendar_id="work@gmail.com")
     # Should not raise
     client.delete_busy_block("gid-deleted")
+
+
+def test_make_body_full_details():
+    service, events_resource = _mock_service()
+    events_resource.insert.return_value.execute.return_value = {"id": "gid-new"}
+
+    client = GoogleCalClient(service=service, calendar_id="work@gmail.com")
+    event = Event(
+        uid="uid-1", start="2026-03-01T10:00:00+00:00", end="2026-03-01T11:00:00+00:00",
+        all_day=False, title="Team standup", location="Room 3B", description="Daily sync",
+    )
+    client.create_event(event, busy_only=False)
+
+    body = events_resource.insert.call_args[1]["body"]
+    assert body["summary"] == "Team standup"
+    assert body["location"] == "Room 3B"
+    assert body["description"] == "Daily sync"
+
+
+def test_make_body_busy_only():
+    service, events_resource = _mock_service()
+    events_resource.insert.return_value.execute.return_value = {"id": "gid-new"}
+
+    client = GoogleCalClient(service=service, calendar_id="work@gmail.com")
+    event = Event(
+        uid="uid-1", start="2026-03-01T10:00:00+00:00", end="2026-03-01T11:00:00+00:00",
+        all_day=False, title="Team standup", location="Room 3B", description="Daily sync",
+    )
+    client.create_event(event, busy_only=True)
+
+    body = events_resource.insert.call_args[1]["body"]
+    assert body["summary"] == "Busy"
+    assert "location" not in body
+    assert body["description"] == ""
+
+
+def test_make_body_full_details_omits_empty_fields():
+    service, events_resource = _mock_service()
+    events_resource.insert.return_value.execute.return_value = {"id": "gid-new"}
+
+    client = GoogleCalClient(service=service, calendar_id="work@gmail.com")
+    event = Event(
+        uid="uid-1", start="2026-03-01T10:00:00+00:00", end="2026-03-01T11:00:00+00:00",
+        all_day=False, title="Meeting",
+    )
+    client.create_event(event, busy_only=False)
+
+    body = events_resource.insert.call_args[1]["body"]
+    assert body["summary"] == "Meeting"
+    assert "location" not in body
+    assert body["description"] == ""
