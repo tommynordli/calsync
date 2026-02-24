@@ -76,4 +76,9 @@ def _parse_vevent(vevent) -> Event | None:
         start_str = dtstart.isoformat()
         end_str = dtend.isoformat() if dtend else start_str
 
-    return Event(uid=uid, start=start_str, end=end_str, all_day=all_day)
+    title = contents["summary"][0].value if "summary" in contents else ""
+    location = contents["location"][0].value if "location" in contents else ""
+    description = contents["description"][0].value if "description" in contents else ""
+
+    return Event(uid=uid, start=start_str, end=end_str, all_day=all_day,
+                 title=title, location=location, description=description)

@@ -5,7 +5,7 @@ from calsync.icloud import fetch_icloud_events
 from calsync.diff import Event
 
 
-def _make_mock_vevent(uid, dtstart, dtend, status="CONFIRMED"):
+def _make_mock_vevent(uid, dtstart, dtend, status="CONFIRMED", title=None, location=None, description=None):
     vevent = MagicMock()
     vevent.contents = {}
     uid_component = MagicMock()
@@ -25,12 +25,27 @@ def _make_mock_vevent(uid, dtstart, dtend, status="CONFIRMED"):
         status_component.value = status
         vevent.contents["status"] = [status_component]
 
+    if title is not None:
+        summary_component = MagicMock()
+        summary_component.value = title
+        vevent.contents["summary"] = [summary_component]
+
+    if location is not None:
+        location_component = MagicMock()
+        location_component.value = location
+        vevent.contents["location"] = [location_component]
+
+    if description is not None:
+        desc_component = MagicMock()
+        desc_component.value = description
+        vevent.contents["description"] = [desc_component]
+
     return vevent
 
 
-def _make_mock_caldav_event(uid, dtstart, dtend, status="CONFIRMED"):
+def _make_mock_caldav_event(uid, dtstart, dtend, status="CONFIRMED", title=None, location=None, description=None):
     event = MagicMock()
-    vevent = _make_mock_vevent(uid, dtstart, dtend, status)
+    vevent = _make_mock_vevent(uid, dtstart, dtend, status, title, location, description)
     event.vobject_instance.vevent = vevent
     return event
 
@@ -126,3 +141,57 @@ def test_fetch_recurring_events_unique_uids(mock_client_class):
     assert events[0].uid != events[1].uid  # UIDs should be unique
     assert "recurring-uid" in events[0].uid
     assert "recurring-uid" in events[1].uid
+
+
+@patch("calsync.icloud.caldav.DAVClient")
+def test_fetch_extracts_event_details(mock_client_class):
+    mock_client = MagicMock()
+    mock_client_class.return_value = mock_client
+    mock_principal = MagicMock()
+    mock_client.principal.return_value = mock_principal
+
+    cal = MagicMock()
+    cal.name = "Personal"
+    dt1 = datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc)
+    dt2 = datetime(2026, 3, 1, 11, 0, tzinfo=timezone.utc)
+    cal.date_search.return_value = [
+        _make_mock_caldav_event("uid-1", dt1, dt2, title="Lunch", location="Cafe", description="With Alex")
+    ]
+    mock_principal.calendars.return_value = [cal]
+
+    events = fetch_icloud_events(
+        username="test@icloud.com",
+        app_password="password",
+        calendar_names=["Personal"],
+        lookahead_days=30,
+    )
+
+    assert events[0].title == "Lunch"
+    assert events[0].location == "Cafe"
+    assert events[0].description == "With Alex"
+
+
+@patch("calsync.icloud.caldav.DAVClient")
+def test_fetch_missing_details_default_empty(mock_client_class):
+    mock_client = MagicMock()
+    mock_client_class.return_value = mock_client
+    mock_principal = MagicMock()
+    mock_client.principal.return_value = mock_principal
+
+    cal = MagicMock()
+    cal.name = "Personal"
+    dt1 = datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc)
+    dt2 = datetime(2026, 3, 1, 11, 0, tzinfo=timezone.utc)
+    cal.date_search.return_value = [_make_mock_caldav_event("uid-1", dt1, dt2)]
+    mock_principal.calendars.return_value = [cal]
+
+    events = fetch_icloud_events(
+        username="test@icloud.com",
+        app_password="password",
+        calendar_names=["Personal"],
+        lookahead_days=30,
+    )
+
+    assert events[0].title == ""
+    assert events[0].location == ""
+    assert events[0].description == ""
