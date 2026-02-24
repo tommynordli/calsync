@@ -7,6 +7,9 @@ class Event:
     start: str
     end: str
     all_day: bool
+    title: str = ""
+    location: str = ""
+    description: str = ""
 
 
 def compute_diff(
@@ -24,7 +27,11 @@ def compute_diff(
             to_create.append(event)
         else:
             entry = state_entries[event.uid]
-            if event.start != entry["start"] or event.end != entry["end"] or event.all_day != entry["all_day"]:
+            if (event.start != entry["start"] or event.end != entry["end"]
+                    or event.all_day != entry["all_day"]
+                    or event.title != entry.get("title", "")
+                    or event.location != entry.get("location", "")
+                    or event.description != entry.get("description", "")):
                 to_update.append((event, entry["google_event_id"]))
 
     for uid, entry in state_entries.items():

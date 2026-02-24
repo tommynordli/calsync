@@ -45,6 +45,43 @@ google:
     assert config.lookahead_days == 30
 
 
+def test_load_config_busy_only(tmp_path):
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("""
+icloud:
+  username: "test@icloud.com"
+  app_password: "abcd-efgh-ijkl-mnop"
+  calendars:
+    - "Personal"
+google:
+  calendar_id: "work@gmail.com"
+  credentials_file: "creds.json"
+  token_file: "tok.json"
+sync:
+  lookahead_days: 14
+  busy_only: true
+""")
+    config = load_config(config_file)
+    assert config.busy_only is True
+
+
+def test_load_config_busy_only_defaults_false(tmp_path):
+    config_file = tmp_path / "config.yaml"
+    config_file.write_text("""
+icloud:
+  username: "test@icloud.com"
+  app_password: "abcd-efgh-ijkl-mnop"
+  calendars:
+    - "Personal"
+google:
+  calendar_id: "work@gmail.com"
+  credentials_file: "creds.json"
+  token_file: "tok.json"
+""")
+    config = load_config(config_file)
+    assert config.busy_only is False
+
+
 def test_load_config_missing_file():
     import pytest
     with pytest.raises(FileNotFoundError):

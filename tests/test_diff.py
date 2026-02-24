@@ -63,3 +63,48 @@ def test_mixed_operations():
     assert to_update[0] == (events[1], "gid-2")
     assert len(to_delete) == 1
     assert to_delete[0] == ("uid-3", "gid-3")
+
+
+def test_event_has_detail_fields():
+    event = Event(
+        uid="uid-1",
+        start="2026-03-01T10:00:00",
+        end="2026-03-01T11:00:00",
+        all_day=False,
+        title="Team standup",
+        location="Room 3B",
+        description="Daily sync",
+    )
+    assert event.title == "Team standup"
+    assert event.location == "Room 3B"
+    assert event.description == "Daily sync"
+
+
+def test_event_detail_fields_default_empty():
+    event = Event(uid="uid-1", start="2026-03-01T10:00:00", end="2026-03-01T11:00:00", all_day=False)
+    assert event.title == ""
+    assert event.location == ""
+    assert event.description == ""
+
+
+def test_title_change_triggers_update():
+    events = [Event(uid="uid-1", start="2026-03-01T10:00:00", end="2026-03-01T11:00:00",
+                    all_day=False, title="New title")]
+    state_entries = {
+        "uid-1": {"google_event_id": "gid-1", "start": "2026-03-01T10:00:00", "end": "2026-03-01T11:00:00",
+                  "all_day": False, "title": "Old title", "location": "", "description": ""},
+    }
+    to_create, to_update, to_delete = compute_diff(events, state_entries)
+    assert len(to_update) == 1
+    assert to_update[0] == (events[0], "gid-1")
+
+
+def test_detail_unchanged_no_update():
+    events = [Event(uid="uid-1", start="2026-03-01T10:00:00", end="2026-03-01T11:00:00",
+                    all_day=False, title="Meeting", location="Room A", description="Notes")]
+    state_entries = {
+        "uid-1": {"google_event_id": "gid-1", "start": "2026-03-01T10:00:00", "end": "2026-03-01T11:00:00",
+                  "all_day": False, "title": "Meeting", "location": "Room A", "description": "Notes"},
+    }
+    to_create, to_update, to_delete = compute_diff(events, state_entries)
+    assert to_update == []

@@ -22,6 +22,9 @@ calsync
 calsync --config path/to/config.yaml
 calsync --auth      # Google OAuth flow only
 calsync --setup     # Interactive setup wizard
+calsync --calendar "Work"  # Override target Google Calendar by name
+calsync --busy-only        # Sync as opaque busy blocks only
+calsync --purge            # Delete all synced events and clear state
 ```
 
 No linter, formatter, or pre-commit hooks are configured.
@@ -32,10 +35,10 @@ The sync engine follows a **source → diff → sink** pipeline:
 
 1. `icloud.fetch_icloud_events()` — CalDAV date_search over a lookahead window → `list[Event]`
 2. `diff.compute_diff(events, state)` → `(to_create, to_update, to_delete)` by comparing against persisted state
-3. `sync.run_sync()` — applies creates/updates/deletes via `GoogleCalClient`, calling `state.save()` after each mutation for crash safety
-4. `state.json` — flat dict mapping iCloud UIDs to `{google_event_id, start, end, all_day}`
+3. `sync.run_sync()` — applies creates/updates/deletes via `GoogleCalClient.create_event()`/`update_event()`/`delete_event()`, passing `busy_only` to control event body content. Detects mode switches and forces update of all events. `handle_calendar_switch()` detects calendar ID changes and optionally purges old events. `state.save()` after each mutation for crash safety.
+4. `state.json` — flat dict mapping iCloud UIDs to `{google_event_id, start, end, all_day}`, plus a `_metadata` key tracking `{target_calendar_id, busy_only}` for switch detection.
 
-All synced Google events are opaque "Busy" blocks with the iCloud UID stored in `extendedProperties.private.icloud_uid`.
+Synced Google events carry full details (title, location, description) by default. With `busy_only` mode, they become opaque "Busy" blocks. The iCloud UID is always stored in `extendedProperties.private.icloud_uid`.
 
 ## Key Conventions
 
@@ -44,7 +47,9 @@ All synced Google events are opaque "Busy" blocks with the iCloud UID stored in 
 - **Private helpers** use `_leading_underscore` (`_parse_vevent`, `_make_body`, `_prompt`).
 - **Relative path resolution**: Config paths resolve relative to the config file's parent directory, not CWD. This is critical for `uv tool install` support.
 - **Recurring events**: Each instance gets a unique UID by appending recurrence-id (`f"{uid}_{rid_str}"`), tracked separately in state.
-- **Idempotent deletes**: `GoogleCalClient.delete_busy_block()` catches HTTP 404 silently.
+- **Idempotent deletes**: `GoogleCalClient.delete_event()` catches HTTP 404 silently.
+- **Busy-only mode**: `_make_body()` produces full-detail events by default (title, location, description from `Event`), opaque "Busy" blocks when `busy_only=True`.
+- **Calendar helpers**: `list_owned_calendars(service)` and `resolve_calendar_by_name(name, calendars)` are standalone functions in `google_cal.py`.
 
 ## File Locations at Runtime
 
