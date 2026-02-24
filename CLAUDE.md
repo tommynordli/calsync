@@ -17,14 +17,14 @@ pytest tests/test_diff.py -v
 # Run a specific test
 pytest tests/test_diff.py::test_mixed_operations -v
 
-# Run sync manually
-calsync
-calsync --config path/to/config.yaml
-calsync --auth      # Google OAuth flow only
-calsync --setup     # Interactive setup wizard
-calsync --calendar "Work"  # Override target Google Calendar by name
-calsync --busy-only        # Sync as opaque busy blocks only
-calsync --purge            # Delete all synced events and clear state
+# CLI commands
+calsync sync                          # Run a sync
+calsync sync --config path/to/config.yaml
+calsync sync --calendar "Work"        # Override target calendar
+calsync sync --busy-only              # Sync as busy blocks only
+calsync auth                          # Google OAuth flow only
+calsync setup                         # Interactive setup wizard
+calsync purge                         # Delete all synced events
 ```
 
 No linter, formatter, or pre-commit hooks are configured.

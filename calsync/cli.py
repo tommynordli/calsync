@@ -17,7 +17,7 @@ LOG_DIR = Path.home() / ".local" / "log"
 LOG_FILE = LOG_DIR / "calsync.log"
 
 
-def setup_logging():
+def _setup_logging():
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
         level=logging.INFO,
@@ -29,33 +29,11 @@ def setup_logging():
     )
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Sync iCloud calendars to Google Calendar")
-    config_dir = Path.home() / ".config" / "calsync"
-    parser.add_argument("--config", type=Path, default=config_dir / "config.yaml", help="Path to config file")
-    parser.add_argument("--state", type=Path, default=config_dir / "state.json", help="Path to state file")
-    parser.add_argument("--auth", action="store_true", help="Run OAuth flow and exit")
-    parser.add_argument("--setup", action="store_true", help="Interactive setup wizard")
-    parser.add_argument("--calendar", type=str, help="Override target Google Calendar by name")
-    parser.add_argument("--busy-only", action="store_true", help="Sync as opaque busy blocks only")
-    parser.add_argument("--purge", action="store_true", help="Delete all synced events and clear state")
-    args = parser.parse_args()
-
-    if args.setup:
-        from calsync.setup import run_setup
-        run_setup()
-        return
-
-    setup_logging()
+def _cmd_sync(args):
+    _setup_logging()
     logger = logging.getLogger(__name__)
 
     config = load_config(args.config)
-
-    if args.auth:
-        logger.info("Running Google OAuth authentication flow...")
-        authenticate(config.google_credentials_file, config.google_token_file)
-        logger.info("Authentication complete. Token saved to %s", config.google_token_file)
-        return
 
     logger.info("Starting sync...")
     try:
@@ -70,12 +48,6 @@ def main():
             logger.info("Resolved calendar '%s' to ID: %s", args.calendar, calendar_id)
 
         state = SyncState(args.state)
-
-        # Handle purge
-        if args.purge:
-            gcal = GoogleCalClient(service=service, calendar_id=calendar_id)
-            purge_events(state, gcal)
-            return
 
         # Handle calendar switch — delete from old calendar, not new one
         old_calendar_id = state.metadata.get("target_calendar_id")
@@ -101,6 +73,91 @@ def main():
     except Exception:
         logger.exception("Sync failed")
         sys.exit(1)
+
+
+def _cmd_setup(args):
+    from calsync.setup import run_setup
+    run_setup()
+
+
+def _cmd_auth(args):
+    _setup_logging()
+    logger = logging.getLogger(__name__)
+
+    config = load_config(args.config)
+    logger.info("Running Google OAuth authentication flow...")
+    authenticate(config.google_credentials_file, config.google_token_file)
+    logger.info("Authentication complete. Token saved to %s", config.google_token_file)
+
+
+def _cmd_purge(args):
+    _setup_logging()
+    logger = logging.getLogger(__name__)
+
+    config = load_config(args.config)
+
+    try:
+        creds = authenticate(config.google_credentials_file, config.google_token_file)
+        service = build_service(creds)
+
+        calendar_id = config.google_calendar_id
+        if args.calendar:
+            calendars = list_owned_calendars(service)
+            calendar_id = resolve_calendar_by_name(args.calendar, calendars)
+            logger.info("Resolved calendar '%s' to ID: %s", args.calendar, calendar_id)
+
+        gcal = GoogleCalClient(service=service, calendar_id=calendar_id)
+        state = SyncState(args.state)
+
+        purge_events(state, gcal)
+    except Exception:
+        logger.exception("Purge failed")
+        sys.exit(1)
+
+
+def main():
+    config_dir = Path.home() / ".config" / "calsync"
+
+    parser = argparse.ArgumentParser(
+        prog="calsync",
+        description="Sync iCloud calendars to Google Calendar",
+    )
+    parser.add_argument("--config", type=Path, default=config_dir / "config.yaml",
+                        help="Path to config file")
+    parser.add_argument("--state", type=Path, default=config_dir / "state.json",
+                        help="Path to state file")
+
+    subparsers = parser.add_subparsers(dest="command")
+
+    # sync
+    sp_sync = subparsers.add_parser("sync", help="Sync iCloud events to Google Calendar")
+    sp_sync.add_argument("--calendar", type=str,
+                         help="Override target Google Calendar by name")
+    sp_sync.add_argument("--busy-only", action="store_true",
+                         help="Sync as opaque busy blocks only")
+    sp_sync.set_defaults(func=_cmd_sync)
+
+    # setup
+    sp_setup = subparsers.add_parser("setup", help="Interactive setup wizard")
+    sp_setup.set_defaults(func=_cmd_setup)
+
+    # auth
+    sp_auth = subparsers.add_parser("auth", help="Run Google OAuth flow")
+    sp_auth.set_defaults(func=_cmd_auth)
+
+    # purge
+    sp_purge = subparsers.add_parser("purge", help="Delete all synced events and clear state")
+    sp_purge.add_argument("--calendar", type=str,
+                          help="Override target Google Calendar by name")
+    sp_purge.set_defaults(func=_cmd_purge)
+
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
+        sys.exit(0)
+
+    args.func(args)
 
 
 if __name__ == "__main__":
