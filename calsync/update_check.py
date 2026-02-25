@@ -27,3 +27,21 @@ def check_remote(commit_file: Path = LATEST_COMMIT_FILE) -> None:
         commit_file.write_text(sha + "\n")
     except Exception:
         pass
+
+
+def check_local(installed_commit: str) -> str | None:
+    """Compare installed commit against cached latest. Returns update message or None."""
+    try:
+        if installed_commit == "unknown":
+            return None
+
+        if not LATEST_COMMIT_FILE.exists():
+            return None
+
+        latest = LATEST_COMMIT_FILE.read_text().strip()
+        if not latest or latest == installed_commit:
+            return None
+
+        return f"Update available! Run: {UPDATE_COMMAND}"
+    except Exception:
+        return None

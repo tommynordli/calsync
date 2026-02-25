@@ -1,10 +1,10 @@
 # tests/test_update_check.py
 import json
+import os
 import time
-from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from calsync.update_check import check_remote
+from calsync.update_check import check_local, check_remote
 
 
 def test_check_remote_writes_sha(tmp_path):
@@ -38,7 +38,6 @@ def test_check_remote_checks_when_stale(tmp_path):
     commit_file.write_text("old_sha")
     # Backdate mtime by 25 hours
     old_time = time.time() - 25 * 3600
-    import os
     os.utime(commit_file, (old_time, old_time))
 
     fake_response = MagicMock()
@@ -60,3 +59,48 @@ def test_check_remote_silently_ignores_errors(tmp_path):
         check_remote(commit_file)  # should not raise
 
     assert not commit_file.exists()
+
+
+def test_check_local_returns_message_when_update_available(tmp_path):
+    """Returns update message when SHAs differ."""
+    commit_file = tmp_path / "latest_commit"
+    commit_file.write_text("b" * 40 + "\n")
+
+    with patch("calsync.update_check.LATEST_COMMIT_FILE", commit_file):
+        result = check_local("a" * 40)
+
+    assert result is not None
+    assert "Update available" in result
+
+
+def test_check_local_returns_none_when_up_to_date(tmp_path):
+    """Returns None when SHAs match."""
+    commit_file = tmp_path / "latest_commit"
+    sha = "a" * 40
+    commit_file.write_text(sha + "\n")
+
+    with patch("calsync.update_check.LATEST_COMMIT_FILE", commit_file):
+        result = check_local(sha)
+
+    assert result is None
+
+
+def test_check_local_returns_none_when_no_file(tmp_path):
+    """Returns None if latest_commit file doesn't exist."""
+    commit_file = tmp_path / "latest_commit_missing"
+
+    with patch("calsync.update_check.LATEST_COMMIT_FILE", commit_file):
+        result = check_local("a" * 40)
+
+    assert result is None
+
+
+def test_check_local_returns_none_for_unknown_commit(tmp_path):
+    """Returns None if installed commit is 'unknown' (dev install)."""
+    commit_file = tmp_path / "latest_commit"
+    commit_file.write_text("b" * 40 + "\n")
+
+    with patch("calsync.update_check.LATEST_COMMIT_FILE", commit_file):
+        result = check_local("unknown")
+
+    assert result is None
