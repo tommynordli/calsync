@@ -19,14 +19,17 @@ LOG_FILE = LOG_DIR / "calsync.log"
 
 def _setup_logging():
     LOG_DIR.mkdir(parents=True, exist_ok=True)
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        handlers=[
-            logging.FileHandler(LOG_FILE),
-            logging.StreamHandler(),
-        ],
-    )
+
+    file_handler = logging.FileHandler(LOG_FILE)
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    stream_handler.setFormatter(logging.Formatter("%(message)s"))
+    stream_handler.addFilter(logging.Filter("calsync"))
+
+    logging.basicConfig(level=logging.INFO, handlers=[file_handler, stream_handler])
 
 
 def _cmd_sync(args):

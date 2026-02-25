@@ -74,6 +74,16 @@ def test_delete_already_gone():
     client.delete_event("gid-deleted")
 
 
+def test_delete_event_gone_410():
+    service, events_resource = _mock_service()
+    resp = httplib2.Response({"status": 410})
+    events_resource.delete.return_value.execute.side_effect = HttpError(resp, b"Resource has been deleted")
+
+    client = GoogleCalClient(service=service, calendar_id="work@gmail.com")
+    # Should not raise
+    client.delete_event("gid-deleted")
+
+
 def test_make_body_full_details():
     service, events_resource = _mock_service()
     events_resource.insert.return_value.execute.return_value = {"id": "gid-new"}

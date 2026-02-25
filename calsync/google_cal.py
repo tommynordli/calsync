@@ -119,7 +119,7 @@ class GoogleCalClient:
             ).execute()
             logger.info("Deleted event: %s", google_event_id)
         except HttpError as e:
-            if e.resp.status == 404:
+            if e.resp.status in (404, 410):
                 logger.warning("Event %s already deleted", google_event_id)
             else:
                 raise
