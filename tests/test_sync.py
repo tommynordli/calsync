@@ -85,11 +85,12 @@ def test_sync_saves_metadata(tmp_path):
 
     events = [Event(uid="uid-1", start="2026-03-01T10:00:00+00:00", end="2026-03-01T11:00:00+00:00", all_day=False)]
 
-    run_sync(events, state, gcal, busy_only=False, calendar_id="cal123")
+    run_sync(events, state, gcal, busy_only=False, calendar_id="cal123", calendar_name="Work")
 
     reloaded = SyncState(tmp_path / "state.json")
     assert reloaded.metadata["busy_only"] is False
     assert reloaded.metadata["target_calendar_id"] == "cal123"
+    assert reloaded.metadata["target_calendar_name"] == "Work"
 
 
 def test_handle_calendar_switch_deletes_old(tmp_path, monkeypatch):
@@ -97,12 +98,13 @@ def test_handle_calendar_switch_deletes_old(tmp_path, monkeypatch):
     state.set("uid-1", "gid-1", "2026-03-01T10:00:00", "2026-03-01T11:00:00", False)
     state.set("uid-2", "gid-2", "2026-03-02T10:00:00", "2026-03-02T11:00:00", False)
     state.set_metadata("target_calendar_id", "old@gmail.com")
+    state.set_metadata("target_calendar_name", "Old Calendar")
     state.save()
 
     old_gcal = MagicMock()
     monkeypatch.setattr("builtins.input", lambda _: "y")
 
-    switched = handle_calendar_switch(state, "new@gmail.com", old_gcal)
+    switched = handle_calendar_switch(state, "new@gmail.com", old_gcal, new_calendar_name="New Calendar")
 
     assert switched is True
     assert old_gcal.delete_event.call_count == 2
@@ -113,12 +115,13 @@ def test_handle_calendar_switch_keep_old(tmp_path, monkeypatch):
     state = SyncState(tmp_path / "state.json")
     state.set("uid-1", "gid-1", "2026-03-01T10:00:00", "2026-03-01T11:00:00", False)
     state.set_metadata("target_calendar_id", "old@gmail.com")
+    state.set_metadata("target_calendar_name", "Old Calendar")
     state.save()
 
     old_gcal = MagicMock()
     monkeypatch.setattr("builtins.input", lambda _: "n")
 
-    switched = handle_calendar_switch(state, "new@gmail.com", old_gcal)
+    switched = handle_calendar_switch(state, "new@gmail.com", old_gcal, new_calendar_name="New Calendar")
 
     assert switched is True
     old_gcal.delete_event.assert_not_called()

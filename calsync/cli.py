@@ -49,7 +49,7 @@ def _cmd_sync(args):
         if args.calendar:
             calendars = list_owned_calendars(service)
             calendar_id = resolve_calendar_by_name(args.calendar, calendars)
-            logger.info("Resolved calendar '%s' to ID: %s", args.calendar, calendar_id)
+            logger.info("Using calendar '%s'", args.calendar)
 
         state = SyncState(args.state)
 
@@ -57,7 +57,7 @@ def _cmd_sync(args):
         old_calendar_id = state.metadata.get("target_calendar_id")
         if old_calendar_id and old_calendar_id != calendar_id:
             old_gcal = GoogleCalClient(service=service, calendar_id=old_calendar_id)
-            handle_calendar_switch(state, calendar_id, old_gcal)
+            handle_calendar_switch(state, calendar_id, old_gcal, new_calendar_name=args.calendar or "")
 
         gcal = GoogleCalClient(service=service, calendar_id=calendar_id)
 
@@ -72,7 +72,7 @@ def _cmd_sync(args):
         )
         logger.info("Fetched %d events from iCloud", len(events))
 
-        run_sync(events, state, gcal, busy_only=busy_only, calendar_id=calendar_id)
+        run_sync(events, state, gcal, busy_only=busy_only, calendar_id=calendar_id, calendar_name=args.calendar or "")
         logger.info("Sync complete")
         check_remote()
     except Exception:
@@ -109,7 +109,7 @@ def _cmd_purge(args):
         if args.calendar:
             calendars = list_owned_calendars(service)
             calendar_id = resolve_calendar_by_name(args.calendar, calendars)
-            logger.info("Resolved calendar '%s' to ID: %s", args.calendar, calendar_id)
+            logger.info("Using calendar '%s'", args.calendar)
 
         gcal = GoogleCalClient(service=service, calendar_id=calendar_id)
         state = SyncState(args.state)
