@@ -14,6 +14,7 @@ def run_sync(
     gcal: GoogleCalClient,
     busy_only: bool = True,
     calendar_id: str = "",
+    calendar_name: str = "",
 ):
     # Detect mode switch — force update all existing events
     force_update_all = False
@@ -55,18 +56,25 @@ def run_sync(
     state.set_metadata("busy_only", busy_only)
     if calendar_id:
         state.set_metadata("target_calendar_id", calendar_id)
+    if calendar_name:
+        state.set_metadata("target_calendar_name", calendar_name)
     state.save()
 
 
-def handle_calendar_switch(state: SyncState, new_calendar_id: str, gcal: GoogleCalClient) -> bool:
+def handle_calendar_switch(
+    state: SyncState, new_calendar_id: str, gcal: GoogleCalClient,
+    new_calendar_name: str = "",
+) -> bool:
     old_calendar_id = state.metadata.get("target_calendar_id")
     if not old_calendar_id or old_calendar_id == new_calendar_id:
         return False
 
-    logger.info("Calendar switch detected: %s -> %s", old_calendar_id, new_calendar_id)
+    old_name = state.metadata.get("target_calendar_name", old_calendar_id)
+    new_name = new_calendar_name or new_calendar_id
+    logger.info("Switching calendar: '%s' → '%s'", old_name, new_name)
     answer = input(
-        f"Events are currently synced to {old_calendar_id}. "
-        f"Delete them before syncing to {new_calendar_id}? (y/n): "
+        f"Events are currently synced to '{old_name}'. "
+        f"Delete them before syncing to '{new_name}'? (y/n): "
     ).strip().lower()
 
     if answer in ("y", "yes"):
