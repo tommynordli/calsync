@@ -75,6 +75,9 @@ def _cmd_sync(args):
         run_sync(events, state, gcal, busy_only=busy_only, calendar_id=calendar_id)
         logger.info("Sync complete")
         check_remote()
+    except ValueError as e:
+        logger.error("Error: %s", e)
+        sys.exit(1)
     except Exception:
         logger.exception("Sync failed")
         sys.exit(1)
@@ -115,6 +118,9 @@ def _cmd_purge(args):
         state = SyncState(args.state)
 
         purge_events(state, gcal)
+    except ValueError as e:
+        logger.error("Error: %s", e)
+        sys.exit(1)
     except Exception:
         logger.exception("Purge failed")
         sys.exit(1)
