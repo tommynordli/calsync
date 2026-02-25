@@ -12,6 +12,7 @@ from calsync.google_cal import (
 from calsync.icloud import fetch_icloud_events
 from calsync.state import SyncState
 from calsync.sync import run_sync, handle_calendar_switch, purge_events
+from calsync.update_check import check_remote, check_local
 
 LOG_DIR = Path.home() / ".local" / "log"
 LOG_FILE = LOG_DIR / "calsync.log"
@@ -73,6 +74,7 @@ def _cmd_sync(args):
 
         run_sync(events, state, gcal, busy_only=busy_only, calendar_id=calendar_id)
         logger.info("Sync complete")
+        check_remote()
     except Exception:
         logger.exception("Sync failed")
         sys.exit(1)
@@ -161,6 +163,15 @@ def main():
         sys.exit(0)
 
     args.func(args)
+
+    if sys.stdout.isatty():
+        try:
+            from calsync._commit import COMMIT
+        except ImportError:
+            COMMIT = "unknown"
+        msg = check_local(COMMIT)
+        if msg:
+            print(msg)
 
 
 if __name__ == "__main__":
