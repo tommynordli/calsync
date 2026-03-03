@@ -19,7 +19,7 @@ pytest tests/test_diff.py::test_mixed_operations -v
 
 # CLI commands
 calsync sync                          # Run a sync
-calsync sync --config path/to/config.yaml
+calsync --config path/to/config.yaml sync
 calsync sync --calendar "Work"        # Override target calendar
 calsync sync --busy-only              # Sync as busy blocks only
 calsync auth                          # Google OAuth flow only
