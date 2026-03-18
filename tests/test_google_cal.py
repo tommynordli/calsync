@@ -1,6 +1,7 @@
+import json
 from unittest.mock import MagicMock, patch
 from pathlib import Path
-from calsync.google_cal import GoogleCalClient, list_owned_calendars, resolve_calendar_by_name
+from calsync.google_cal import GoogleCalClient, authenticate, list_owned_calendars, resolve_calendar_by_name
 from calsync.diff import Event
 from googleapiclient.errors import HttpError
 import httplib2
@@ -184,3 +185,26 @@ def test_resolve_calendar_by_name_duplicates(monkeypatch):
     monkeypatch.setattr("builtins.input", lambda _: "2")
     result = resolve_calendar_by_name("Work", calendars)
     assert result == "work2@group.calendar.google.com"
+
+
+@patch("calsync.google_cal.InstalledAppFlow")
+def test_authenticate_corrupt_token_file(mock_flow_cls, tmp_path):
+    """Corrupt token file should trigger re-authentication, not crash."""
+    token_file = tmp_path / "token.json"
+    token_file.write_text("t {invalid json")
+    creds_file = tmp_path / "credentials.json"
+    creds_file.write_text(json.dumps({"installed": {
+        "client_id": "test", "client_secret": "test",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+    }}))
+
+    mock_creds = MagicMock()
+    mock_creds.valid = True
+    mock_creds.to_json.return_value = '{"token": "fresh"}'
+    mock_flow_cls.from_client_secrets_file.return_value.run_local_server.return_value = mock_creds
+
+    result = authenticate(creds_file, token_file)
+
+    assert result == mock_creds
+    mock_flow_cls.from_client_secrets_file.assert_called_once()
