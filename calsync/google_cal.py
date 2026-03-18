@@ -20,7 +20,11 @@ SCOPES = [
 def authenticate(credentials_file: Path, token_file: Path) -> Credentials:
     creds = None
     if token_file.exists():
-        creds = Credentials.from_authorized_user_file(str(token_file), SCOPES)
+        try:
+            creds = Credentials.from_authorized_user_file(str(token_file), SCOPES)
+        except ValueError:
+            logger.warning("Token file is corrupted, re-authenticating...")
+            creds = None
 
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
