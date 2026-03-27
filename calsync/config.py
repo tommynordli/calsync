@@ -5,6 +5,14 @@ import yaml
 
 
 @dataclass(frozen=True)
+class ReverseSync:
+    enabled: bool
+    google_calendar: str
+    icloud_calendar: str
+    busy_only: bool
+
+
+@dataclass(frozen=True)
 class Config:
     icloud_username: str
     icloud_app_password: str
@@ -14,6 +22,7 @@ class Config:
     google_token_file: Path
     lookahead_days: int
     busy_only: bool
+    reverse_sync: ReverseSync | None
 
 
 def load_config(path: Path) -> Config:
@@ -31,6 +40,16 @@ def load_config(path: Path) -> Config:
         fp = Path(p)
         return fp if fp.is_absolute() else config_dir / fp
 
+    reverse_sync = None
+    if "reverse_sync" in raw:
+        rs = raw["reverse_sync"]
+        reverse_sync = ReverseSync(
+            enabled=rs.get("enabled", False),
+            google_calendar=rs["google_calendar"],
+            icloud_calendar=rs["icloud_calendar"],
+            busy_only=rs.get("busy_only", True),
+        )
+
     return Config(
         icloud_username=icloud["username"],
         icloud_app_password=icloud["app_password"],
@@ -40,4 +59,5 @@ def load_config(path: Path) -> Config:
         google_token_file=_resolve(google["token_file"]),
         lookahead_days=sync.get("lookahead_days", 30),
         busy_only=sync.get("busy_only", False),
+        reverse_sync=reverse_sync,
     )

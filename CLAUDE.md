@@ -18,27 +18,49 @@ pytest tests/test_diff.py -v
 pytest tests/test_diff.py::test_mixed_operations -v
 
 # CLI commands
-calsync sync                          # Run a sync
+calsync sync                          # Run a sync (both directions if reverse enabled)
 calsync --config path/to/config.yaml sync
 calsync sync --calendar "Work"        # Override target calendar
 calsync sync --busy-only              # Sync as busy blocks only
 calsync auth                          # Google OAuth flow only
 calsync setup                         # Interactive setup wizard
-calsync purge                         # Delete all synced events
+calsync purge                         # Delete forward-synced events
+calsync purge --reverse               # Delete reverse-synced iCloud events
+calsync purge --all                   # Delete both directions
 ```
 
 No linter, formatter, or pre-commit hooks are configured.
 
 ## Architecture
 
-The sync engine follows a **source → diff → sink** pipeline:
+The sync engine supports **two-way sync** between iCloud and Google Calendar, running both directions in a single `calsync sync` invocation.
+
+### Forward sync (iCloud → Google)
+
+Follows a **source → diff → sink** pipeline:
 
 1. `icloud.fetch_icloud_events()` — CalDAV date_search over a lookahead window → `list[Event]`
 2. `diff.compute_diff(events, state)` → `(to_create, to_update, to_delete)` by comparing against persisted state
 3. `sync.run_sync()` — applies creates/updates/deletes via `GoogleCalClient.create_event()`/`update_event()`/`delete_event()`, passing `busy_only` to control event body content. Detects mode switches and forces update of all events. `handle_calendar_switch()` detects calendar ID changes and optionally purges old events. `state.save()` after each mutation for crash safety.
-4. `state.json` — flat dict mapping iCloud UIDs to `{google_event_id, start, end, all_day}`, plus a `_metadata` key tracking `{target_calendar_id, busy_only}` for switch detection.
+4. `state.json` — envelope dict with `entries` mapping iCloud UIDs to `{google_event_id, start, end, all_day, title, location, description}`, plus `metadata` tracking `{target_calendar_id, busy_only}` for switch detection.
 
-Synced Google events carry full details (title, location, description) by default. With `busy_only` mode, they become opaque "Busy" blocks. The iCloud UID is always stored in `extendedProperties.private.icloud_uid`.
+### Reverse sync (Google → iCloud)
+
+Parallel pipeline that syncs native Google events to a dedicated iCloud calendar:
+
+1. `google_cal.fetch_google_events()` — Google Calendar API list with pagination → `list[Event]`, skipping any event with `extendedProperties.private.icloud_uid` (loop prevention)
+2. `diff.compute_diff(events, state, target_id_key="icloud_event_href")` — same diff engine, generic target ID key
+3. `reverse_sync.run_reverse_sync()` — applies creates/updates/deletes via `icloud_write.create_icloud_event()`/`update_icloud_event()`/`delete_icloud_event()`
+4. `reverse_state.json` — maps Google event IDs to `{icloud_event_href, start, end, all_day, ...}`
+
+### Loop prevention (two layers)
+
+| Direction | Primary | Safety net |
+|-----------|---------|------------|
+| iCloud → Google | Reverse sync writes to a dedicated iCloud calendar NOT in forward source list | `_parse_vevent` skips events with `X-CALSYNC-SOURCE:google` |
+| Google → iCloud | `fetch_google_events` skips events with `extendedProperties.private.icloud_uid` | Reverse state tracks only native Google event IDs |
+
+Synced Google events carry full details (title, location, description) by default. With `busy_only` mode, they become opaque "Busy" blocks. The iCloud UID is always stored in `extendedProperties.private.icloud_uid`. Reverse-synced iCloud events carry `X-CALSYNC-SOURCE:google` and use UID prefix `calsync-reverse-`.
 
 ## Key Conventions
 
@@ -53,7 +75,7 @@ Synced Google events carry full details (title, location, description) by defaul
 
 ## File Locations at Runtime
 
-- Config/credentials: `~/.config/calsync/` (config.yaml, credentials.json, token.json)
+- Config/credentials: `~/.config/calsync/` (config.yaml, credentials.json, token.json, state.json, reverse_state.json)
 - Logs: `~/.local/log/calsync.log`
 - Launchd plist: `~/Library/LaunchAgents/com.calsync.plist`
 - Plist template: bundled as package data in `calsync/com.calsync.plist`, loaded via `importlib.resources`

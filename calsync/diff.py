@@ -15,6 +15,7 @@ class Event:
 def compute_diff(
     events: list[Event],
     state_entries: dict[str, dict],
+    target_id_key: str = "google_event_id",
 ) -> tuple[list[Event], list[tuple[Event, str]], list[tuple[str, str]]]:
     current_uids = {e.uid for e in events}
 
@@ -32,10 +33,10 @@ def compute_diff(
                     or event.title != entry.get("title", "")
                     or event.location != entry.get("location", "")
                     or event.description != entry.get("description", "")):
-                to_update.append((event, entry["google_event_id"]))
+                to_update.append((event, entry[target_id_key]))
 
     for uid, entry in state_entries.items():
         if uid not in current_uids:
-            to_delete.append((uid, entry["google_event_id"]))
+            to_delete.append((uid, entry[target_id_key]))
 
     return to_create, to_update, to_delete

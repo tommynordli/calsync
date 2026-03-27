@@ -145,8 +145,46 @@ def run_setup():
         yaml.dump(config, f, default_flow_style=False)
     print(f"\nConfig written to {config_path}")
 
-    # Step 8: Test sync
-    print("\nStep 5: Test sync")
+    # Step 8: Reverse sync (optional)
+    print("\nStep 5: Reverse sync (optional)")
+    answer = _prompt("Sync Google Calendar events back to iCloud?", "n")
+    if answer.lower() in ("y", "yes"):
+        print("\nWhich Google calendar to read work events from?")
+        for i, cal in enumerate(owned_calendars, 1):
+            print(f"  {i}. {cal['name']}")
+        print()
+        rev_pick = int(input("Calendar number: ").strip()) - 1
+        rev_google_cal = owned_calendars[rev_pick]["name"]
+
+        print(f"\nWhich iCloud calendar should receive events from '{rev_google_cal}'?")
+        print("(This should be a dedicated calendar, NOT one you're already syncing from)")
+        for i, name in enumerate(calendar_names, 1):
+            print(f"  {i}. {name}")
+        print()
+        rev_icloud_pick = input("Calendar number (or type a new calendar name): ").strip()
+        try:
+            rev_icloud_idx = int(rev_icloud_pick) - 1
+            rev_icloud_cal = calendar_names[rev_icloud_idx]
+        except (ValueError, IndexError):
+            rev_icloud_cal = rev_icloud_pick
+
+        rev_busy = _prompt("Show full details for reverse-synced events?", "y")
+        rev_busy_only = rev_busy.lower() not in ("y", "yes")
+
+        config["reverse_sync"] = {
+            "enabled": True,
+            "google_calendar": rev_google_cal,
+            "icloud_calendar": rev_icloud_cal,
+            "busy_only": rev_busy_only,
+        }
+
+        # Re-write config with reverse_sync section
+        with open(config_path, "w") as f:
+            yaml.dump(config, f, default_flow_style=False)
+        print(f"Reverse sync configured: {rev_google_cal} → {rev_icloud_cal}")
+
+    # Step 9: Test sync
+    print("\nStep 6: Test sync")
     answer = _prompt("Run a test sync now?", "y")
     if answer.lower() in ("y", "yes"):
         result = subprocess.run(
@@ -157,8 +195,8 @@ def run_setup():
         else:
             print("Test sync succeeded!")
 
-    # Step 9: Install launchd
-    print("\nStep 6: Automatic scheduling")
+    # Step 10: Install launchd
+    print("\nStep 7: Automatic scheduling")
     answer = _prompt("Install launchd plist to run every 15 minutes?", "y")
     if answer.lower() in ("y", "yes"):
         _install_launchd()

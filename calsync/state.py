@@ -32,6 +32,19 @@ class SyncState:
             "description": description,
         }
 
+    def set_entry(self, source_uid: str, target_id: str, target_id_key: str,
+                  start: str, end: str, all_day: bool,
+                  title: str = "", location: str = "", description: str = ""):
+        self.entries[source_uid] = {
+            target_id_key: target_id,
+            "start": start,
+            "end": end,
+            "all_day": all_day,
+            "title": title,
+            "location": location,
+            "description": description,
+        }
+
     def remove(self, icloud_uid: str):
         self.entries.pop(icloud_uid, None)
 

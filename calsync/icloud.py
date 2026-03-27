@@ -59,6 +59,10 @@ def _parse_vevent(vevent) -> Event | None:
     if status and status.upper() == "CANCELLED":
         return None
 
+    # Loop prevention: skip events created by reverse sync
+    if "x-calsync-source" in contents:
+        return None
+
     uid = contents["uid"][0].value
     if "recurrence-id" in contents:
         recurrence_id = contents["recurrence-id"][0].value

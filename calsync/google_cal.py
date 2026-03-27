@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from google.oauth2.credentials import Credentials
@@ -64,6 +65,64 @@ def resolve_calendar_by_name(name: str, calendars: list[dict]) -> str:
         print(f"  {i}. {cal['name']} ({cal['id']})")
     pick = int(input("Pick a number: ").strip()) - 1
     return matches[pick]["id"]
+
+
+def fetch_google_events(
+    service,
+    calendar_id: str,
+    lookahead_days: int,
+) -> list[Event]:
+    now = datetime.now(timezone.utc)
+    time_min = now.isoformat()
+    time_max = (now + timedelta(days=lookahead_days)).isoformat()
+
+    events: list[Event] = []
+    page_token = None
+
+    while True:
+        result = service.events().list(
+            calendarId=calendar_id,
+            timeMin=time_min,
+            timeMax=time_max,
+            singleEvents=True,
+            orderBy="startTime",
+            pageToken=page_token,
+        ).execute()
+
+        for item in result.get("items", []):
+            # Loop prevention: skip events synced from iCloud
+            ext = item.get("extendedProperties", {}).get("private", {})
+            if ext.get("icloud_uid"):
+                continue
+
+            uid = item["id"]
+            start_raw = item.get("start", {})
+            end_raw = item.get("end", {})
+
+            if "date" in start_raw:
+                all_day = True
+                start = start_raw["date"]
+                end = end_raw.get("date", start)
+            else:
+                all_day = False
+                start = start_raw.get("dateTime", "")
+                end = end_raw.get("dateTime", "")
+
+            events.append(Event(
+                uid=uid,
+                start=start,
+                end=end,
+                all_day=all_day,
+                title=item.get("summary", ""),
+                location=item.get("location", ""),
+                description=item.get("description", ""),
+            ))
+
+        page_token = result.get("nextPageToken")
+        if not page_token:
+            break
+
+    return events
 
 
 class GoogleCalClient:

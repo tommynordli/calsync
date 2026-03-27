@@ -7,9 +7,11 @@ from pathlib import Path
 from calsync.config import load_config
 from calsync.google_cal import (
     GoogleCalClient, authenticate, build_service,
-    list_owned_calendars, resolve_calendar_by_name,
+    fetch_google_events, list_owned_calendars, resolve_calendar_by_name,
 )
 from calsync.icloud import fetch_icloud_events
+from calsync.icloud_write import get_target_calendar
+from calsync.reverse_sync import run_reverse_sync, purge_reverse_events
 from calsync.state import SyncState
 from calsync.sync import run_sync, handle_calendar_switch, purge_events
 from calsync.update_check import check_remote, check_local
@@ -73,7 +75,38 @@ def _cmd_sync(args):
         logger.info("Fetched %d events from iCloud", len(events))
 
         run_sync(events, state, gcal, busy_only=busy_only, calendar_id=calendar_id, calendar_name=args.calendar or "")
-        logger.info("Sync complete")
+        logger.info("Forward sync complete")
+
+        # Reverse sync: Google → iCloud
+        if config.reverse_sync and config.reverse_sync.enabled:
+            logger.info("Starting reverse sync (Google → iCloud)...")
+
+            calendars = list_owned_calendars(service)
+            reverse_cal_id = resolve_calendar_by_name(
+                config.reverse_sync.google_calendar, calendars,
+            )
+
+            google_events = fetch_google_events(
+                service, reverse_cal_id, config.lookahead_days,
+            )
+            logger.info("Fetched %d native events from Google Calendar", len(google_events))
+
+            icloud_cal = get_target_calendar(
+                config.icloud_username,
+                config.icloud_app_password,
+                config.reverse_sync.icloud_calendar,
+            )
+
+            reverse_state = SyncState(args.reverse_state)
+
+            run_reverse_sync(
+                google_events, reverse_state, icloud_cal,
+                busy_only=config.reverse_sync.busy_only,
+                source_calendar_id=reverse_cal_id,
+                target_icloud_calendar=config.reverse_sync.icloud_calendar,
+            )
+            logger.info("Reverse sync complete")
+
         check_remote()
     except ValueError as e:
         logger.error("Error: %s", e)
@@ -105,19 +138,36 @@ def _cmd_purge(args):
     config = load_config(args.config)
 
     try:
-        creds = authenticate(config.google_credentials_file, config.google_token_file)
-        service = build_service(creds)
+        purge_forward = not args.reverse or args.all
+        purge_rev = args.reverse or args.all
 
-        calendar_id = config.google_calendar_id
-        if args.calendar:
-            calendars = list_owned_calendars(service)
-            calendar_id = resolve_calendar_by_name(args.calendar, calendars)
-            logger.info("Using calendar '%s'", args.calendar)
+        if purge_forward:
+            creds = authenticate(config.google_credentials_file, config.google_token_file)
+            service = build_service(creds)
 
-        gcal = GoogleCalClient(service=service, calendar_id=calendar_id)
-        state = SyncState(args.state)
+            calendar_id = config.google_calendar_id
+            if args.calendar:
+                calendars = list_owned_calendars(service)
+                calendar_id = resolve_calendar_by_name(args.calendar, calendars)
+                logger.info("Using calendar '%s'", args.calendar)
 
-        purge_events(state, gcal)
+            gcal = GoogleCalClient(service=service, calendar_id=calendar_id)
+            state = SyncState(args.state)
+            purge_events(state, gcal)
+
+        if purge_rev:
+            if not config.reverse_sync:
+                logger.error("No reverse_sync section in config")
+                sys.exit(1)
+
+            icloud_cal = get_target_calendar(
+                config.icloud_username,
+                config.icloud_app_password,
+                config.reverse_sync.icloud_calendar,
+            )
+            reverse_state = SyncState(args.reverse_state)
+            purge_reverse_events(reverse_state, icloud_cal)
+
     except ValueError as e:
         logger.error("Error: %s", e)
         sys.exit(1)
@@ -131,12 +181,14 @@ def main():
 
     parser = argparse.ArgumentParser(
         prog="calsync",
-        description="Sync iCloud calendars to Google Calendar",
+        description="Two-way sync between iCloud and Google Calendar",
     )
     parser.add_argument("--config", type=Path, default=config_dir / "config.yaml",
                         help="Path to config file")
     parser.add_argument("--state", type=Path, default=config_dir / "state.json",
                         help="Path to state file")
+    parser.add_argument("--reverse-state", type=Path, default=config_dir / "reverse_state.json",
+                        help="Path to reverse sync state file")
 
     subparsers = parser.add_subparsers(dest="command")
 
@@ -160,6 +212,10 @@ def main():
     sp_purge = subparsers.add_parser("purge", help="Delete all synced events and clear state")
     sp_purge.add_argument("--calendar", type=str,
                           help="Override target Google Calendar by name")
+    sp_purge.add_argument("--reverse", action="store_true",
+                          help="Purge reverse-synced iCloud events only")
+    sp_purge.add_argument("--all", action="store_true",
+                          help="Purge both forward and reverse synced events")
     sp_purge.set_defaults(func=_cmd_purge)
 
     args = parser.parse_args()
