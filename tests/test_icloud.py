@@ -5,7 +5,7 @@ from calsync.icloud import fetch_icloud_events
 from calsync.diff import Event
 
 
-def _make_mock_vevent(uid, dtstart, dtend, status="CONFIRMED", title=None, location=None, description=None):
+def _make_mock_vevent(uid, dtstart, dtend, status="CONFIRMED", title=None, location=None, description=None, attendees=None):
     vevent = MagicMock()
     vevent.contents = {}
     uid_component = MagicMock()
@@ -40,12 +40,21 @@ def _make_mock_vevent(uid, dtstart, dtend, status="CONFIRMED", title=None, locat
         desc_component.value = description
         vevent.contents["description"] = [desc_component]
 
+    if attendees is not None:
+        attendee_components = []
+        for email, partstat in attendees:
+            a = MagicMock()
+            a.value = f"mailto:{email}"
+            a.params = {"PARTSTAT": [partstat]}
+            attendee_components.append(a)
+        vevent.contents["attendee"] = attendee_components
+
     return vevent
 
 
-def _make_mock_caldav_event(uid, dtstart, dtend, status="CONFIRMED", title=None, location=None, description=None):
+def _make_mock_caldav_event(uid, dtstart, dtend, status="CONFIRMED", title=None, location=None, description=None, attendees=None):
     event = MagicMock()
-    vevent = _make_mock_vevent(uid, dtstart, dtend, status, title, location, description)
+    vevent = _make_mock_vevent(uid, dtstart, dtend, status, title, location, description, attendees)
     event.vobject_instance.vevent = vevent
     return event
 
@@ -61,7 +70,7 @@ def test_fetch_events_basic(mock_client_class):
     cal.name = "Personal"
     dt1 = datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc)
     dt2 = datetime(2026, 3, 1, 11, 0, tzinfo=timezone.utc)
-    cal.date_search.return_value = [_make_mock_caldav_event("uid-1", dt1, dt2)]
+    cal.search.return_value = [_make_mock_caldav_event("uid-1", dt1, dt2)]
     mock_principal.calendars.return_value = [cal]
 
     events = fetch_icloud_events(
@@ -87,7 +96,7 @@ def test_fetch_skips_cancelled(mock_client_class):
     cal.name = "Personal"
     dt1 = datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc)
     dt2 = datetime(2026, 3, 1, 11, 0, tzinfo=timezone.utc)
-    cal.date_search.return_value = [_make_mock_caldav_event("uid-1", dt1, dt2, status="CANCELLED")]
+    cal.search.return_value = [_make_mock_caldav_event("uid-1", dt1, dt2, status="CANCELLED")]
     mock_principal.calendars.return_value = [cal]
 
     events = fetch_icloud_events(
@@ -127,7 +136,7 @@ def test_fetch_recurring_events_unique_uids(mock_client_class):
     rid2.value = dt3
     event2.vobject_instance.vevent.contents["recurrence-id"] = [rid2]
 
-    cal.date_search.return_value = [event1, event2]
+    cal.search.return_value = [event1, event2]
     mock_principal.calendars.return_value = [cal]
 
     events = fetch_icloud_events(
@@ -154,7 +163,7 @@ def test_fetch_extracts_event_details(mock_client_class):
     cal.name = "Personal"
     dt1 = datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc)
     dt2 = datetime(2026, 3, 1, 11, 0, tzinfo=timezone.utc)
-    cal.date_search.return_value = [
+    cal.search.return_value = [
         _make_mock_caldav_event("uid-1", dt1, dt2, title="Lunch", location="Cafe", description="With Alex")
     ]
     mock_principal.calendars.return_value = [cal]
@@ -192,7 +201,7 @@ def test_fetch_skips_calsync_source_google(mock_client_class):
     # Normal event without the marker
     normal_event = _make_mock_caldav_event("uid-2", dt1, dt2)
 
-    cal.date_search.return_value = [event_with_source, normal_event]
+    cal.search.return_value = [event_with_source, normal_event]
     mock_principal.calendars.return_value = [cal]
 
     events = fetch_icloud_events(
@@ -217,7 +226,7 @@ def test_fetch_missing_details_default_empty(mock_client_class):
     cal.name = "Personal"
     dt1 = datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc)
     dt2 = datetime(2026, 3, 1, 11, 0, tzinfo=timezone.utc)
-    cal.date_search.return_value = [_make_mock_caldav_event("uid-1", dt1, dt2)]
+    cal.search.return_value = [_make_mock_caldav_event("uid-1", dt1, dt2)]
     mock_principal.calendars.return_value = [cal]
 
     events = fetch_icloud_events(
@@ -230,3 +239,73 @@ def test_fetch_missing_details_default_empty(mock_client_class):
     assert events[0].title == ""
     assert events[0].location == ""
     assert events[0].description == ""
+
+
+def _setup_mock_caldav(mock_client_class, cal_name, caldav_events):
+    mock_client = MagicMock()
+    mock_client_class.return_value = mock_client
+    mock_principal = MagicMock()
+    mock_client.principal.return_value = mock_principal
+    cal = MagicMock()
+    cal.name = cal_name
+    cal.search.return_value = caldav_events
+    mock_principal.calendars.return_value = [cal]
+
+
+@patch("calsync.icloud.caldav.DAVClient")
+def test_fetch_skips_declined_event(mock_client_class):
+    dt1 = datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc)
+    dt2 = datetime(2026, 3, 1, 11, 0, tzinfo=timezone.utc)
+    ev = _make_mock_caldav_event("uid-1", dt1, dt2,
+        attendees=[("test@icloud.com", "DECLINED"), ("other@example.com", "ACCEPTED")])
+    _setup_mock_caldav(mock_client_class, "Personal", [ev])
+
+    events = fetch_icloud_events("test@icloud.com", "pw", ["Personal"], 30)
+    assert len(events) == 0
+
+
+@patch("calsync.icloud.caldav.DAVClient")
+def test_fetch_skips_tentative_event(mock_client_class):
+    dt1 = datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc)
+    dt2 = datetime(2026, 3, 1, 11, 0, tzinfo=timezone.utc)
+    ev = _make_mock_caldav_event("uid-1", dt1, dt2,
+        attendees=[("test@icloud.com", "TENTATIVE")])
+    _setup_mock_caldav(mock_client_class, "Personal", [ev])
+
+    events = fetch_icloud_events("test@icloud.com", "pw", ["Personal"], 30)
+    assert len(events) == 0
+
+
+@patch("calsync.icloud.caldav.DAVClient")
+def test_fetch_skips_needs_action_event(mock_client_class):
+    dt1 = datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc)
+    dt2 = datetime(2026, 3, 1, 11, 0, tzinfo=timezone.utc)
+    ev = _make_mock_caldav_event("uid-1", dt1, dt2,
+        attendees=[("test@icloud.com", "NEEDS-ACTION")])
+    _setup_mock_caldav(mock_client_class, "Personal", [ev])
+
+    events = fetch_icloud_events("test@icloud.com", "pw", ["Personal"], 30)
+    assert len(events) == 0
+
+
+@patch("calsync.icloud.caldav.DAVClient")
+def test_fetch_keeps_accepted_event(mock_client_class):
+    dt1 = datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc)
+    dt2 = datetime(2026, 3, 1, 11, 0, tzinfo=timezone.utc)
+    ev = _make_mock_caldav_event("uid-1", dt1, dt2,
+        attendees=[("organizer@example.com", "ACCEPTED"), ("test@icloud.com", "ACCEPTED")])
+    _setup_mock_caldav(mock_client_class, "Personal", [ev])
+
+    events = fetch_icloud_events("test@icloud.com", "pw", ["Personal"], 30)
+    assert len(events) == 1
+
+
+@patch("calsync.icloud.caldav.DAVClient")
+def test_fetch_keeps_event_without_attendees(mock_client_class):
+    dt1 = datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc)
+    dt2 = datetime(2026, 3, 1, 11, 0, tzinfo=timezone.utc)
+    ev = _make_mock_caldav_event("uid-1", dt1, dt2)
+    _setup_mock_caldav(mock_client_class, "Personal", [ev])
+
+    events = fetch_icloud_events("test@icloud.com", "pw", ["Personal"], 30)
+    assert len(events) == 1

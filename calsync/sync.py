@@ -74,10 +74,10 @@ def handle_calendar_switch(
     logger.info("Switching calendar: '%s' → '%s'", old_name, new_name)
     answer = input(
         f"Events are currently synced to '{old_name}'. "
-        f"Delete them before syncing to '{new_name}'? (y/n): "
+        f"Delete them before syncing to '{new_name}'? [Y/n]: "
     ).strip().lower()
 
-    if answer in ("y", "yes"):
+    if answer in ("y", "yes", ""):
         for uid, entry in list(state.entries.items()):
             gcal.delete_event(entry["google_event_id"])
             logger.info("Deleted %s from old calendar", uid)
@@ -93,8 +93,8 @@ def purge_events(state: SyncState, gcal: GoogleCalClient):
         return
 
     count = len(state.entries)
-    answer = input(f"Delete all {count} synced events and clear state? (y/n): ").strip().lower()
-    if answer not in ("y", "yes"):
+    answer = input(f"Delete all {count} synced events and clear state? [Y/n]: ").strip().lower()
+    if answer not in ("y", "yes", ""):
         print("Cancelled.")
         return
 

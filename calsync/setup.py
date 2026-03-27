@@ -20,6 +20,11 @@ def _prompt(message: str, default: str = "") -> str:
     return result or default
 
 
+def _confirm(message: str) -> bool:
+    answer = input(f"{message} [Y/n]: ").strip().lower()
+    return answer in ("y", "yes", "")
+
+
 def _prompt_password(message: str) -> str:
     import getpass
     return getpass.getpass(f"{message}: ")
@@ -120,8 +125,7 @@ def run_setup():
 
     # Step 6: Busy only?
     print("\nStep 4: Event detail level")
-    answer = _prompt("Sync full event details (title, location, description)?", "y")
-    busy_only = answer.lower() not in ("y", "yes")
+    busy_only = not _confirm("Sync full event details (title, location, description)?")
 
     # Step 7: Write config
     config = {
@@ -147,8 +151,7 @@ def run_setup():
 
     # Step 8: Reverse sync (optional)
     print("\nStep 5: Reverse sync (optional)")
-    answer = _prompt("Sync Google Calendar events back to iCloud?", "n")
-    if answer.lower() in ("y", "yes"):
+    if _confirm("Sync Google Calendar events back to iCloud?"):
         print("\nWhich Google calendar to read work events from?")
         for i, cal in enumerate(owned_calendars, 1):
             print(f"  {i}. {cal['name']}")
@@ -168,8 +171,7 @@ def run_setup():
         except (ValueError, IndexError):
             rev_icloud_cal = rev_icloud_pick
 
-        rev_busy = _prompt("Show full details for reverse-synced events?", "y")
-        rev_busy_only = rev_busy.lower() not in ("y", "yes")
+        rev_busy_only = not _confirm("Show full details for reverse-synced events?")
 
         config["reverse_sync"] = {
             "enabled": True,
@@ -185,8 +187,7 @@ def run_setup():
 
     # Step 9: Test sync
     print("\nStep 6: Test sync")
-    answer = _prompt("Run a test sync now?", "y")
-    if answer.lower() in ("y", "yes"):
+    if _confirm("Run a test sync now?"):
         result = subprocess.run(
             [sys.executable, "-m", "calsync.cli", "--config", str(config_path), "sync"],
         )
@@ -197,8 +198,7 @@ def run_setup():
 
     # Step 10: Install launchd
     print("\nStep 7: Automatic scheduling")
-    answer = _prompt("Install launchd plist to run every 15 minutes?", "y")
-    if answer.lower() in ("y", "yes"):
+    if _confirm("Install launchd plist to run every 15 minutes?"):
         _install_launchd()
     else:
         print("Skipped. You can install it later — see README.md.")

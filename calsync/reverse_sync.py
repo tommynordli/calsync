@@ -79,8 +79,8 @@ def purge_reverse_events(state: SyncState, calendar: caldav.Calendar):
         return
 
     count = len(state.entries)
-    answer = input(f"Delete all {count} reverse-synced iCloud events and clear state? (y/n): ").strip().lower()
-    if answer not in ("y", "yes"):
+    answer = input(f"Delete all {count} reverse-synced iCloud events and clear state? [Y/n]: ").strip().lower()
+    if answer not in ("y", "yes", ""):
         print("Cancelled.")
         return
 

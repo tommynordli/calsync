@@ -95,6 +95,13 @@ def fetch_google_events(
             if ext.get("icloud_uid"):
                 continue
 
+            # Skip events the user hasn't accepted
+            attendees = item.get("attendees", [])
+            if attendees:
+                self_attendee = next((a for a in attendees if a.get("self")), None)
+                if self_attendee and self_attendee.get("responseStatus") != "accepted":
+                    continue
+
             uid = item["id"]
             start_raw = item.get("start", {})
             end_raw = item.get("end", {})
