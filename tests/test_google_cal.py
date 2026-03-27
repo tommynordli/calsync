@@ -326,3 +326,64 @@ def test_fetch_google_events_empty():
     events = fetch_google_events(service, "work@gmail.com", 30)
 
     assert events == []
+
+
+def _google_event_with_attendees(event_id, response_status):
+    return {
+        "id": event_id,
+        "summary": "Meeting",
+        "start": {"dateTime": "2026-03-01T10:00:00+00:00"},
+        "end": {"dateTime": "2026-03-01T11:00:00+00:00"},
+        "attendees": [
+            {"email": "organizer@example.com", "responseStatus": "accepted"},
+            {"email": "me@gmail.com", "self": True, "responseStatus": response_status},
+        ],
+    }
+
+
+def test_fetch_google_events_skips_declined():
+    service, events_resource = _mock_service()
+    events_resource.list.return_value.execute.return_value = {
+        "items": [_google_event_with_attendees("gid-1", "declined")],
+    }
+    assert fetch_google_events(service, "work@gmail.com", 30) == []
+
+
+def test_fetch_google_events_skips_tentative():
+    service, events_resource = _mock_service()
+    events_resource.list.return_value.execute.return_value = {
+        "items": [_google_event_with_attendees("gid-1", "tentative")],
+    }
+    assert fetch_google_events(service, "work@gmail.com", 30) == []
+
+
+def test_fetch_google_events_skips_needs_action():
+    service, events_resource = _mock_service()
+    events_resource.list.return_value.execute.return_value = {
+        "items": [_google_event_with_attendees("gid-1", "needsAction")],
+    }
+    assert fetch_google_events(service, "work@gmail.com", 30) == []
+
+
+def test_fetch_google_events_keeps_accepted():
+    service, events_resource = _mock_service()
+    events_resource.list.return_value.execute.return_value = {
+        "items": [_google_event_with_attendees("gid-1", "accepted")],
+    }
+    events = fetch_google_events(service, "work@gmail.com", 30)
+    assert len(events) == 1
+    assert events[0].uid == "gid-1"
+
+
+def test_fetch_google_events_keeps_no_attendees():
+    service, events_resource = _mock_service()
+    events_resource.list.return_value.execute.return_value = {
+        "items": [{
+            "id": "gid-1",
+            "summary": "Personal task",
+            "start": {"dateTime": "2026-03-01T10:00:00+00:00"},
+            "end": {"dateTime": "2026-03-01T11:00:00+00:00"},
+        }],
+    }
+    events = fetch_google_events(service, "work@gmail.com", 30)
+    assert len(events) == 1

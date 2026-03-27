@@ -37,11 +37,11 @@ def fetch_icloud_events(
     events: list[Event] = []
     for cal in target_cals:
         logger.info("Fetching events from '%s'", cal.name)
-        results = cal.date_search(start=start, end=end, expand=True)
+        results = cal.search(start=start, end=end, event=True, expand=True)
         for item in results:
             try:
                 vevent = item.vobject_instance.vevent
-                event = _parse_vevent(vevent)
+                event = _parse_vevent(vevent, username)
                 if event:
                     events.append(event)
             except Exception:
@@ -50,7 +50,7 @@ def fetch_icloud_events(
     return events
 
 
-def _parse_vevent(vevent) -> Event | None:
+def _parse_vevent(vevent, owner_email: str = "") -> Event | None:
     contents = vevent.contents
 
     status = None
@@ -62,6 +62,17 @@ def _parse_vevent(vevent) -> Event | None:
     # Loop prevention: skip events created by reverse sync
     if "x-calsync-source" in contents:
         return None
+
+    # Skip events the user hasn't accepted (declined, tentative, no response)
+    if owner_email and "attendee" in contents:
+        owner_lower = owner_email.lower()
+        for attendee in contents["attendee"]:
+            email = attendee.value.lower().replace("mailto:", "")
+            if owner_lower in email:
+                partstat = attendee.params.get("PARTSTAT", [None])[0]
+                if partstat and partstat.upper() != "ACCEPTED":
+                    return None
+                break
 
     uid = contents["uid"][0].value
     if "recurrence-id" in contents:
