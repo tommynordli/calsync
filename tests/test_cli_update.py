@@ -25,6 +25,7 @@ def test_cmd_sync_calls_check_remote(tmp_path):
             icloud_calendars=["Cal"],
             lookahead_days=30,
             busy_only=False,
+            reverse_sync=None,
         )
         mock_state = MagicMock()
         mock_state.metadata = {}

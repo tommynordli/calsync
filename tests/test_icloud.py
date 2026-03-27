@@ -172,6 +172,41 @@ def test_fetch_extracts_event_details(mock_client_class):
 
 
 @patch("calsync.icloud.caldav.DAVClient")
+def test_fetch_skips_calsync_source_google(mock_client_class):
+    mock_client = MagicMock()
+    mock_client_class.return_value = mock_client
+    mock_principal = MagicMock()
+    mock_client.principal.return_value = mock_principal
+
+    cal = MagicMock()
+    cal.name = "Work Events"
+    dt1 = datetime(2026, 3, 1, 10, 0, tzinfo=timezone.utc)
+    dt2 = datetime(2026, 3, 1, 11, 0, tzinfo=timezone.utc)
+
+    # Event with X-CALSYNC-SOURCE (created by reverse sync)
+    event_with_source = _make_mock_caldav_event("calsync-reverse-gid-1", dt1, dt2)
+    source_component = MagicMock()
+    source_component.value = "google"
+    event_with_source.vobject_instance.vevent.contents["x-calsync-source"] = [source_component]
+
+    # Normal event without the marker
+    normal_event = _make_mock_caldav_event("uid-2", dt1, dt2)
+
+    cal.date_search.return_value = [event_with_source, normal_event]
+    mock_principal.calendars.return_value = [cal]
+
+    events = fetch_icloud_events(
+        username="test@icloud.com",
+        app_password="password",
+        calendar_names=["Work Events"],
+        lookahead_days=30,
+    )
+
+    assert len(events) == 1
+    assert events[0].uid == "uid-2"
+
+
+@patch("calsync.icloud.caldav.DAVClient")
 def test_fetch_missing_details_default_empty(mock_client_class):
     mock_client = MagicMock()
     mock_client_class.return_value = mock_client

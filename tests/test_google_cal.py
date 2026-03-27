@@ -1,7 +1,7 @@
 import json
 from unittest.mock import MagicMock, patch
 from pathlib import Path
-from calsync.google_cal import GoogleCalClient, authenticate, list_owned_calendars, resolve_calendar_by_name
+from calsync.google_cal import GoogleCalClient, authenticate, fetch_google_events, list_owned_calendars, resolve_calendar_by_name
 from calsync.diff import Event
 from googleapiclient.errors import HttpError
 import httplib2
@@ -208,3 +208,121 @@ def test_authenticate_corrupt_token_file(mock_flow_cls, tmp_path):
 
     assert result == mock_creds
     mock_flow_cls.from_client_secrets_file.assert_called_once()
+
+
+# --- fetch_google_events tests ---
+
+def test_fetch_google_events_basic():
+    service, events_resource = _mock_service()
+    events_resource.list.return_value.execute.return_value = {
+        "items": [
+            {
+                "id": "gid-1",
+                "summary": "Team standup",
+                "location": "Room 3B",
+                "description": "Daily sync",
+                "start": {"dateTime": "2026-03-01T10:00:00+00:00"},
+                "end": {"dateTime": "2026-03-01T11:00:00+00:00"},
+            },
+        ],
+    }
+
+    events = fetch_google_events(service, "work@gmail.com", 30)
+
+    assert len(events) == 1
+    assert events[0].uid == "gid-1"
+    assert events[0].title == "Team standup"
+    assert events[0].location == "Room 3B"
+    assert events[0].description == "Daily sync"
+    assert events[0].all_day is False
+
+
+def test_fetch_google_events_skips_icloud_synced():
+    service, events_resource = _mock_service()
+    events_resource.list.return_value.execute.return_value = {
+        "items": [
+            {
+                "id": "gid-1",
+                "summary": "Native work event",
+                "start": {"dateTime": "2026-03-01T10:00:00+00:00"},
+                "end": {"dateTime": "2026-03-01T11:00:00+00:00"},
+            },
+            {
+                "id": "gid-2",
+                "summary": "Synced from iCloud",
+                "start": {"dateTime": "2026-03-01T12:00:00+00:00"},
+                "end": {"dateTime": "2026-03-01T13:00:00+00:00"},
+                "extendedProperties": {
+                    "private": {"icloud_uid": "uid-from-icloud"},
+                },
+            },
+        ],
+    }
+
+    events = fetch_google_events(service, "work@gmail.com", 30)
+
+    assert len(events) == 1
+    assert events[0].uid == "gid-1"
+
+
+def test_fetch_google_events_all_day():
+    service, events_resource = _mock_service()
+    events_resource.list.return_value.execute.return_value = {
+        "items": [
+            {
+                "id": "gid-1",
+                "summary": "Company holiday",
+                "start": {"date": "2026-03-01"},
+                "end": {"date": "2026-03-02"},
+            },
+        ],
+    }
+
+    events = fetch_google_events(service, "work@gmail.com", 30)
+
+    assert len(events) == 1
+    assert events[0].all_day is True
+    assert events[0].start == "2026-03-01"
+    assert events[0].end == "2026-03-02"
+
+
+def test_fetch_google_events_pagination():
+    service, events_resource = _mock_service()
+
+    page1 = {
+        "items": [
+            {
+                "id": "gid-1",
+                "summary": "Event 1",
+                "start": {"dateTime": "2026-03-01T10:00:00+00:00"},
+                "end": {"dateTime": "2026-03-01T11:00:00+00:00"},
+            },
+        ],
+        "nextPageToken": "token123",
+    }
+    page2 = {
+        "items": [
+            {
+                "id": "gid-2",
+                "summary": "Event 2",
+                "start": {"dateTime": "2026-03-02T10:00:00+00:00"},
+                "end": {"dateTime": "2026-03-02T11:00:00+00:00"},
+            },
+        ],
+    }
+    events_resource.list.return_value.execute.side_effect = [page1, page2]
+
+    events = fetch_google_events(service, "work@gmail.com", 30)
+
+    assert len(events) == 2
+    assert events[0].uid == "gid-1"
+    assert events[1].uid == "gid-2"
+
+
+def test_fetch_google_events_empty():
+    service, events_resource = _mock_service()
+    events_resource.list.return_value.execute.return_value = {"items": []}
+
+    events = fetch_google_events(service, "work@gmail.com", 30)
+
+    assert events == []

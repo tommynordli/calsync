@@ -71,6 +71,23 @@ def test_metadata_preserved_with_entries(tmp_path):
     assert reloaded.metadata["target_calendar_id"] == "work@gmail.com"
 
 
+def test_set_entry_custom_key(tmp_path):
+    state_file = tmp_path / "state.json"
+    state = SyncState(state_file)
+    state.set_entry("gid-1", "https://caldav.icloud.com/1/event.ics", "icloud_event_href",
+                    "2026-03-01T10:00:00", "2026-03-01T11:00:00", False,
+                    title="Meeting", location="Room A")
+    state.save()
+
+    reloaded = SyncState(state_file)
+    assert "gid-1" in reloaded.entries
+    entry = reloaded.entries["gid-1"]
+    assert entry["icloud_event_href"] == "https://caldav.icloud.com/1/event.ics"
+    assert entry["title"] == "Meeting"
+    assert entry["location"] == "Room A"
+    assert "google_event_id" not in entry
+
+
 def test_clear_entries_preserves_nothing(tmp_path):
     state_file = tmp_path / "state.json"
     state = SyncState(state_file)

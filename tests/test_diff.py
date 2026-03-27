@@ -108,3 +108,24 @@ def test_detail_unchanged_no_update():
     }
     to_create, to_update, to_delete = compute_diff(events, state_entries)
     assert to_update == []
+
+
+def test_compute_diff_custom_target_id_key():
+    events = [
+        Event(uid="gid-1", start="2026-03-01T10:00:00", end="2026-03-01T12:00:00", all_day=False),  # updated
+        Event(uid="gid-3", start="2026-03-03T09:00:00", end="2026-03-03T10:00:00", all_day=False),  # new
+    ]
+    state_entries = {
+        "gid-1": {"icloud_event_href": "https://caldav/1.ics", "start": "2026-03-01T10:00:00",
+                  "end": "2026-03-01T11:00:00", "all_day": False},
+        "gid-2": {"icloud_event_href": "https://caldav/2.ics", "start": "2026-03-02T10:00:00",
+                  "end": "2026-03-02T11:00:00", "all_day": False},
+    }
+    to_create, to_update, to_delete = compute_diff(events, state_entries, target_id_key="icloud_event_href")
+
+    assert len(to_create) == 1
+    assert to_create[0].uid == "gid-3"
+    assert len(to_update) == 1
+    assert to_update[0] == (events[0], "https://caldav/1.ics")
+    assert len(to_delete) == 1
+    assert to_delete[0] == ("gid-2", "https://caldav/2.ics")
