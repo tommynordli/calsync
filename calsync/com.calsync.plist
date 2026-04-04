@@ -7,11 +7,13 @@
     <key>ProgramArguments</key>
     <array>
         <string>VENV_PATH/bin/calsync</string>
-        <string>sync</string>
         <string>--config</string>
         <string>PROJECT_PATH/config.yaml</string>
         <string>--state</string>
         <string>PROJECT_PATH/state.json</string>
+        <string>--reverse-state</string>
+        <string>PROJECT_PATH/reverse_state.json</string>
+        <string>sync</string>
     </array>
     <key>WorkingDirectory</key>
     <string>PROJECT_PATH</string>

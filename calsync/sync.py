@@ -1,5 +1,6 @@
 # calsync/sync.py
 import logging
+import sys
 
 from calsync.diff import Event, compute_diff
 from calsync.google_cal import GoogleCalClient
@@ -72,10 +73,15 @@ def handle_calendar_switch(
     old_name = state.metadata.get("target_calendar_name", old_calendar_id)
     new_name = new_calendar_name or new_calendar_id
     logger.info("Switching calendar: '%s' → '%s'", old_name, new_name)
-    answer = input(
-        f"Events are currently synced to '{old_name}'. "
-        f"Delete them before syncing to '{new_name}'? [Y/n]: "
-    ).strip().lower()
+
+    if sys.stdin.isatty():
+        answer = input(
+            f"Events are currently synced to '{old_name}'. "
+            f"Delete them before syncing to '{new_name}'? [Y/n]: "
+        ).strip().lower()
+    else:
+        logger.info("Non-interactive mode — auto-deleting old events")
+        answer = "y"
 
     if answer in ("y", "yes", ""):
         for uid, entry in list(state.entries.items()):

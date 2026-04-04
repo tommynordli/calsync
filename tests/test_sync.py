@@ -102,6 +102,7 @@ def test_handle_calendar_switch_deletes_old(tmp_path, monkeypatch):
     state.save()
 
     old_gcal = MagicMock()
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
     monkeypatch.setattr("builtins.input", lambda _: "y")
 
     switched = handle_calendar_switch(state, "new@gmail.com", old_gcal, new_calendar_name="New Calendar")
@@ -119,6 +120,7 @@ def test_handle_calendar_switch_keep_old(tmp_path, monkeypatch):
     state.save()
 
     old_gcal = MagicMock()
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
     monkeypatch.setattr("builtins.input", lambda _: "n")
 
     switched = handle_calendar_switch(state, "new@gmail.com", old_gcal, new_calendar_name="New Calendar")
