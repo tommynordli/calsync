@@ -14,6 +14,7 @@
         <string>--reverse-state</string>
         <string>PROJECT_PATH/reverse_state.json</string>
         <string>sync</string>
+        <string>--yes</string>
     </array>
     <key>WorkingDirectory</key>
     <string>PROJECT_PATH</string>

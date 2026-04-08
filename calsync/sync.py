@@ -64,7 +64,7 @@ def run_sync(
 
 def handle_calendar_switch(
     state: SyncState, new_calendar_id: str, gcal: GoogleCalClient,
-    new_calendar_name: str = "",
+    new_calendar_name: str = "", auto_yes: bool = False,
 ) -> bool:
     old_calendar_id = state.metadata.get("target_calendar_id")
     if not old_calendar_id or old_calendar_id == new_calendar_id:
@@ -74,14 +74,14 @@ def handle_calendar_switch(
     new_name = new_calendar_name or new_calendar_id
     logger.info("Switching calendar: '%s' → '%s'", old_name, new_name)
 
-    if sys.stdin.isatty():
+    if auto_yes or not sys.stdin.isatty():
+        logger.info("Non-interactive mode — auto-deleting old events")
+        answer = "y"
+    else:
         answer = input(
             f"Events are currently synced to '{old_name}'. "
             f"Delete them before syncing to '{new_name}'? [Y/n]: "
         ).strip().lower()
-    else:
-        logger.info("Non-interactive mode — auto-deleting old events")
-        answer = "y"
 
     if answer in ("y", "yes", ""):
         for uid, entry in list(state.entries.items()):

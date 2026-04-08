@@ -59,7 +59,7 @@ def _cmd_sync(args):
         old_calendar_id = state.metadata.get("target_calendar_id")
         if old_calendar_id and old_calendar_id != calendar_id:
             old_gcal = GoogleCalClient(service=service, calendar_id=old_calendar_id)
-            handle_calendar_switch(state, calendar_id, old_gcal, new_calendar_name=args.calendar or "")
+            handle_calendar_switch(state, calendar_id, old_gcal, new_calendar_name=args.calendar or "", auto_yes=args.yes)
 
         gcal = GoogleCalClient(service=service, calendar_id=calendar_id)
 
@@ -198,6 +198,8 @@ def main():
                          help="Override target Google Calendar by name")
     sp_sync.add_argument("--busy-only", action="store_true",
                          help="Sync as opaque busy blocks only")
+    sp_sync.add_argument("-y", "--yes", action="store_true",
+                         help="Answer yes to all prompts (for non-interactive use)")
     sp_sync.set_defaults(func=_cmd_sync)
 
     # setup
