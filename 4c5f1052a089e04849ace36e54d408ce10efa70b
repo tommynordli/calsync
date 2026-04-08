@@ -1,0 +1,27 @@
+calsync/cli.py
+  ee39831de39de8f5 62,201-202
+calsync/com.calsync.plist
+  ee39831de39de8f5 17
+calsync/sync.py
+  ee39831de39de8f5 67,77-80
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.6",
+  "base_commit_sha": "4c5f1052a089e04849ace36e54d408ce10efa70b",
+  "prompts": {
+    "ee39831de39de8f5": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "386d1bba-9751-482f-be03-e89ba51422df",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "Tommy Nordli",
+      "messages": [],
+      "total_additions": 9,
+      "total_deletions": 6,
+      "accepted_lines": 9,
+      "overriden_lines": 0
+    }
+  }
+}
